@@ -1,0 +1,757 @@
+Build a complete, polished, hackathon-ready web application called:
+
+OPS MIND AI
+Tagline: "Turn scattered enterprise information into intelligent action."
+
+CONTEXT:
+This is an Enterprise AI hackathon prototype. The goal is to demonstrate how AI can transform fragmented enterprise information into actionable tasks, automated workflows, risk alerts, and decision-ready insights.
+
+IMPORTANT:
+Build a FUNCTIONAL prototype, not a static landing page.
+Prioritize working user flows and realistic demo data.
+The application must run successfully in Replit without requiring complicated external infrastructure.
+
+==================================================
+1. CORE PROBLEM
+==================================================
+
+Organizations have information scattered across documents, meeting notes, spreadsheets, emails, tasks, and different departments.
+
+Employees spend significant time:
+- searching for information
+- identifying action items
+- following up with teams
+- tracking deadlines
+- preparing reports
+- understanding why decisions were made
+
+This leads to information silos, missed deadlines, operational bottlenecks, and slow decision-making.
+
+OpsMind AI solves this by creating an intelligent enterprise operations layer.
+
+==================================================
+2. CORE PRODUCT FLOW
+==================================================
+
+The application should demonstrate:
+
+Enterprise Data
+      ↓
+AI Understanding
+      ↓
+Action Detection
+      ↓
+Workflow Automation
+      ↓
+Risk Detection
+      ↓
+Decision Intelligence
+
+The user should be able to:
+
+1. Upload or select an enterprise document
+2. View AI-generated summary
+3. Automatically extract tasks
+4. Identify owners and deadlines
+5. View risks and dependencies
+6. Track tasks on a dashboard
+7. Ask questions about enterprise data
+8. View AI-generated management insights
+
+==================================================
+3. DESIGN
+==================================================
+
+Create a premium enterprise SaaS interface.
+
+Design inspiration:
+- Linear
+- Notion
+- Stripe Dashboard
+- Microsoft Copilot
+- modern AI enterprise products
+
+Use:
+- clean white/light-gray background
+- dark text
+- subtle blue/purple AI accents
+- rounded cards
+- professional typography
+- subtle shadows
+- clean spacing
+- responsive layout
+- modern icons
+- smooth micro-interactions
+
+Do NOT make it look like a generic AI chatbot.
+
+The application should look like a serious startup product being presented to enterprise judges.
+
+==================================================
+4. APPLICATION STRUCTURE
+==================================================
+
+Create a sidebar navigation:
+
+OPS MIND AI
+----------------
+Dashboard
+AI Workspace
+Documents
+Tasks
+Risks
+Decision Memory
+Insights
+Settings
+
+At the bottom:
+
+AI System Status
+● Operational
+
+==================================================
+5. DASHBOARD
+==================================================
+
+Create an executive dashboard.
+
+Header:
+
+"Good morning, Alex"
+"Here's what's happening across your organization."
+
+Show KPI cards:
+
+Active Projects: 12
+Pending Actions: 28
+At-Risk Tasks: 5
+Overdue Tasks: 3
+
+Add an "AI Operational Health" section.
+
+Display:
+
+Operational Health: 87%
+
+Use a circular or horizontal visualization.
+
+Then show:
+
+"AI Detected Priorities"
+
+Example alerts:
+
+1. Vendor API approval is blocking Project Atlas
+   Risk: High
+   3 dependent tasks affected
+
+2. Finance approval is due tomorrow
+   Risk: Medium
+
+3. Marketing campaign assets are overdue
+   Risk: Medium
+
+Each alert should have:
+- severity
+- explanation
+- affected project
+- recommended action
+- "View Details" button
+
+==================================================
+6. AI WORKSPACE
+==================================================
+
+Create a powerful AI assistant interface.
+
+Title:
+
+"Ask your organization"
+
+Subtitle:
+
+"Get answers from enterprise knowledge, documents and workflows."
+
+Example questions:
+
+"What are the biggest operational risks this week?"
+
+"Which projects are currently blocked?"
+
+"Why was Vendor Alpha selected?"
+
+"Show me overdue tasks."
+
+"Which deadlines are approaching?"
+
+When a user asks a question, show a realistic AI response.
+
+IMPORTANT:
+
+Responses should include source references.
+
+Example:
+
+AI response:
+
+"Project Atlas is currently at risk because the vendor API approval is still pending. Three downstream tasks depend on this approval."
+
+Then show:
+
+Sources
+- Project Atlas Status Report
+- Vendor Evaluation Meeting
+- Engineering Dependency Report
+
+Add:
+"View source"
+
+Make the AI responses visually polished.
+
+==================================================
+7. DOCUMENTS
+==================================================
+
+Create a document management page.
+
+Show sample enterprise documents:
+
+Project Atlas Status Report
+Vendor Evaluation
+Q3 Financial Planning
+Engineering Meeting Notes
+Marketing Campaign Plan
+HR Policy Update
+
+Each document should display:
+
+- document type
+- department
+- uploaded date
+- AI processing status
+- number of extracted tasks
+- number of detected risks
+
+Add:
+
+"+ Upload Document"
+
+When clicking a document, show:
+
+Document Summary
+Key Decisions
+Extracted Actions
+Deadlines
+Risks
+Related Projects
+Sources
+
+If actual file upload is easy to implement, support PDF/TXT uploads.
+
+If not, implement a working simulated upload flow with sample documents.
+
+==================================================
+8. AI ACTION EXTRACTOR
+==================================================
+
+This is one of the MOST IMPORTANT features.
+
+Create a page where the user can upload/select a document.
+
+After processing, show:
+
+AI ANALYSIS COMPLETE
+
+Summary:
+"Project Atlas requires final vendor API approval before the integration phase can begin."
+
+Automatically extract:
+
+TASK
+"Complete vendor API approval"
+
+OWNER
+"Finance + Engineering"
+
+DEADLINE
+"October 3, 2026"
+
+PRIORITY
+"High"
+
+DEPENDENCY
+"Integration Phase"
+
+Then show buttons:
+
+[Create Task]
+[Assign Owner]
+[Set Reminder]
+
+When "Create Task" is clicked, actually add the task to the Tasks page.
+
+==================================================
+9. TASK MANAGEMENT
+==================================================
+
+Create a professional task management interface.
+
+Tabs:
+
+All
+My Tasks
+At Risk
+Overdue
+Completed
+
+Each task should contain:
+
+Task name
+Project
+Owner
+Priority
+Deadline
+Status
+AI Risk Score
+
+Example tasks:
+
+Vendor API Approval
+Budget Approval
+API Integration
+Security Review
+Marketing Assets
+Client Contract Review
+
+Allow users to:
+
+- change status
+- change priority
+- assign owner
+- set deadline
+- mark complete
+
+Use realistic interactions.
+
+==================================================
+10. AI FOLLOW-UP AGENT
+==================================================
+
+Create an "AI Follow-Up Agent" section.
+
+Explain:
+
+"OpsMind automatically monitors enterprise actions and follows up on pending work."
+
+Show:
+
+Vendor API Approval
+Status: Waiting 2 days
+Owner: Engineering
+AI Action: Reminder scheduled
+
+Budget Approval
+Status: Due tomorrow
+Owner: Finance
+AI Action: Escalation recommended
+
+Add a button:
+
+"Run AI Follow-Up"
+
+When clicked, simulate the AI checking pending tasks and display:
+
+"AI Follow-Up completed"
+
+"3 owners notified"
+"1 escalation created"
+"2 reminders scheduled"
+
+==================================================
+11. RISK CENTER
+==================================================
+
+Create an AI Risk Center.
+
+Show detected risks with:
+
+Risk
+Probability
+Impact
+Affected Tasks
+Recommended Action
+
+Example:
+
+HIGH
+Vendor approval delay
+
+Probability: 82%
+Impact: High
+Affected Tasks: 3
+
+AI Recommendation:
+"Escalate approval to Finance leadership within 24 hours."
+
+Allow clicking a risk to see details.
+
+==================================================
+12. DECISION MEMORY
+==================================================
+
+This should be a UNIQUE feature.
+
+Create a "Decision Memory" page.
+
+The purpose:
+
+Organizations often forget WHY decisions were made.
+
+Show decisions as cards/timeline:
+
+Decision:
+"Selected Vendor Alpha"
+
+Date:
+September 18, 2026
+
+Decision Makers:
+Engineering + Finance
+
+Reason:
+"Lower integration cost and stronger API reliability."
+
+Evidence:
+- Vendor Evaluation
+- Engineering Meeting Notes
+- Finance Comparison
+
+Related Tasks:
+API Integration
+Contract Approval
+
+Add a search box:
+
+"Why did we choose Vendor Alpha?"
+
+When clicked, show the complete decision chain.
+
+==================================================
+13. INSIGHTS
+==================================================
+
+Create an AI-generated management insights page.
+
+Sections:
+
+Operational Trends
+
+Top Bottlenecks
+
+Department Workload
+
+Upcoming Deadlines
+
+Risk Trends
+
+AI Recommendations
+
+Example:
+
+"Engineering currently has 42% of all pending high-priority tasks."
+
+"Vendor-related dependencies account for 35% of current project risks."
+
+"5 deadlines fall within the next 72 hours."
+
+Add simple charts using a chart library.
+
+==================================================
+14. AI AGENT ACTIVITY
+==================================================
+
+Create a small activity panel showing what the AI is doing.
+
+Example:
+
+● Analyzed Project Atlas report
+● Detected 4 action items
+● Identified 2 risks
+● Created 3 tasks
+● Scheduled 2 reminders
+● Updated operational health score
+
+This makes the application feel like an active AI system rather than a dashboard.
+
+==================================================
+15. SEARCH
+==================================================
+
+Add global search.
+
+User can search:
+
+documents
+tasks
+projects
+decisions
+risks
+
+Example:
+
+Search:
+"Vendor Alpha"
+
+Results:
+
+Decision
+Vendor Alpha selected
+
+Document
+Vendor Evaluation
+
+Task
+Vendor API Approval
+
+Risk
+Vendor approval delay
+
+==================================================
+16. DEMO DATA
+==================================================
+
+Preload realistic enterprise data.
+
+Departments:
+
+Engineering
+Finance
+Marketing
+HR
+Operations
+Sales
+
+Projects:
+
+Project Atlas
+Project Nova
+Project Orion
+
+Employees:
+
+Alex Morgan
+Priya Shah
+Rahul Mehta
+Sarah Wilson
+Daniel Lee
+
+Create realistic tasks, documents, risks and decisions.
+
+==================================================
+17. AI IMPLEMENTATION
+==================================================
+
+Structure the application so that real AI can be connected.
+
+Create a clean service layer such as:
+
+/services/aiService
+
+Implement functions such as:
+
+analyzeDocument()
+extractTasks()
+detectRisks()
+answerEnterpriseQuestion()
+generateInsights()
+explainDecision()
+
+For the hackathon prototype, use realistic mock AI responses if an API key is unavailable.
+
+IMPORTANT:
+
+The UI must work even without an external AI API.
+
+If an environment variable such as OPENAI_API_KEY is available, structure the service so it can use the API.
+
+Never expose API keys in frontend code.
+
+==================================================
+18. DATA MODEL
+==================================================
+
+Create structured models for:
+
+User
+Document
+Task
+Project
+Risk
+Decision
+AIInsight
+Activity
+
+Use local mock data or a lightweight database suitable for Replit.
+
+The application should persist important interactions during the session.
+
+==================================================
+19. TECHNICAL REQUIREMENTS
+==================================================
+
+Use a modern web stack.
+
+Preferred:
+
+React
+TypeScript
+Tailwind CSS
+Node.js
+Express
+
+Use a chart library such as Recharts.
+
+Use Lucide icons.
+
+Create reusable components.
+
+Keep the code clean and modular.
+
+Do NOT put the entire application into one file.
+
+==================================================
+20. RESPONSIVENESS
+==================================================
+
+The application must work on:
+
+Desktop
+Laptop
+Tablet
+Mobile
+
+The desktop experience is the primary priority because this is an enterprise dashboard.
+
+==================================================
+21. HACKATHON DEMO MODE
+==================================================
+
+Add a "Demo Mode" button in the top navigation.
+
+When clicked, provide a guided scenario:
+
+SCENARIO:
+"Project Atlas is approaching a critical deadline."
+
+Demo flow:
+
+1. Open Project Atlas report
+2. AI analyzes document
+3. AI extracts vendor approval task
+4. AI identifies dependency
+5. AI detects risk
+6. Task is created
+7. AI schedules follow-up
+8. Dashboard updates
+9. Executive insight is generated
+
+This should make it possible to demonstrate the complete product in approximately 2–3 minutes.
+
+==================================================
+22. LANDING / LOGIN
+==================================================
+
+Create a simple professional login screen.
+
+Logo:
+
+OPS MIND AI
+
+Tagline:
+
+"Enterprise intelligence that turns information into action."
+
+Buttons:
+
+Continue with Demo
+Sign In
+
+For the hackathon, "Continue with Demo" should immediately open the dashboard.
+
+No complicated authentication is necessary.
+
+==================================================
+23. IMPORTANT UX DETAILS
+==================================================
+
+Use:
+
+Toast notifications
+Loading states
+Empty states
+Hover effects
+Modal dialogs
+Confirmation messages
+Skeleton loaders where appropriate
+
+Example:
+
+When AI analyzes a document:
+
+"AI is analyzing enterprise data..."
+
+Then:
+
+"Analysis complete"
+
+4 actions detected
+2 risks detected
+1 dependency detected
+
+==================================================
+24. FINAL HACKATHON REQUIREMENTS
+==================================================
+
+The final application must clearly demonstrate these Enterprise AI capabilities:
+
+✓ Enterprise knowledge understanding
+✓ AI-powered document analysis
+✓ Automatic task extraction
+✓ Workflow automation
+✓ Intelligent follow-ups
+✓ Risk detection
+✓ Decision intelligence
+✓ Evidence-backed answers
+✓ Organizational memory
+✓ Executive insights
+
+The product should feel like a real enterprise SaaS product, not a college CRUD project.
+
+MOST IMPORTANT:
+
+Do not spend the majority of development time on the landing page.
+
+Prioritize:
+
+1. Working Dashboard
+2. AI Workspace
+3. Document → AI Analysis
+4. Action Extraction
+5. Task creation
+6. Risk Detection
+7. Decision Memory
+8. AI Insights
+9. Demo Mode
+
+After implementation:
+
+- Run the application
+- Fix all build errors
+- Fix all console errors
+- Verify every navigation item
+- Verify buttons and interactions
+- Make sure the demo flow works from beginning to end
+- Make sure the application can be previewed in Replit
+
+Do not stop after generating the UI.
+Actually implement the interactions and test the application.
