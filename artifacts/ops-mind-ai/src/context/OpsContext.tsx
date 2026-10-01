@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { ScheduleBlock, ScheduleProposal, StudentData, StudentTask } from '../data/model';
-import { makeInitialData } from '../data/seed';
+import type { ScheduleBlock, ScheduleProposal, StudentData, StudentPreferences, StudentTask, TaskStatus } from '../data/model';
+import { localDate, makeInitialData } from '../data/seed';
 
 const STORE_KEY='timeos-student-planner-v1';
 export interface ToastRecord{id:string;title:string;detail:string;type:'success'|'info'}
@@ -8,6 +8,7 @@ interface TimeOSContextValue {
   data:StudentData; toast:(title:string,detail?:string,type?:'success'|'info')=>void; toasts:ToastRecord[];
   setProposal:(proposal:ScheduleProposal|null)=>void; applyProposal:()=>void; toggleBlock:(id:string)=>void;
   addBlock:(block:ScheduleBlock)=>void; addTask:(task:StudentTask,block:ScheduleBlock)=>void; toggleTask:(id:string)=>void;
+  setTaskStatus:(id:string,status:TaskStatus)=>void; updatePreferences:(preferences:Partial<StudentPreferences>)=>void;
   importTimetable:(blocks:ScheduleBlock[])=>number; resetDemo:()=>void;
 }
 const TimeOSContext=createContext<TimeOSContextValue|null>(null);
@@ -25,9 +26,17 @@ function loadData():StudentData{
     if(raw){
       const parsed=JSON.parse(raw) as Partial<StudentData>;
       const proposal='proposal' in parsed?parsed.proposal:initial.proposal;
+      const tasks=(Array.isArray(parsed.tasks)?parsed.tasks:initial.tasks).map(task=>({
+        ...task,
+        status:task.status??(task.completed?'completed':task.deadline===localDate?'today':'backlog'),
+        priority:task.priority??'normal',
+      }));
       return {
         ...initial,...parsed,
         schedule:normalizeSchedule(Array.isArray(parsed.schedule)?parsed.schedule:initial.schedule,initial.schedule),
+        tasks,
+        attendance:Array.isArray(parsed.attendance)?parsed.attendance:initial.attendance,
+        preferences:{...initial.preferences,...parsed.preferences},
         proposal:proposal?{...proposal,schedule:normalizeSchedule(proposal.schedule,initial.schedule)}:null,
       };
     }
@@ -49,7 +58,9 @@ export function OpsProvider({children}:{children:ReactNode}){
     toggleBlock:id=>setData(current=>({...current,schedule:current.schedule.map(item=>item.id===id?{...item,completed:!item.completed}:item)})),
     addBlock:block=>setData(current=>({...current,schedule:[...current.schedule,block].sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start))})),
     addTask:(task,block)=>setData(current=>({...current,tasks:[task,...current.tasks],schedule:[...current.schedule,block].sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start))})),
-    toggleTask:id=>setData(current=>({...current,tasks:current.tasks.map(task=>task.id===id?{...task,completed:!task.completed}:task)})),
+    toggleTask:id=>setData(current=>({...current,tasks:current.tasks.map(task=>task.id===id?{...task,completed:!task.completed,status:!task.completed?'completed':task.deadline===localDate?'today':'backlog'}:task)})),
+    setTaskStatus:(id,status)=>setData(current=>({...current,tasks:current.tasks.map(task=>task.id===id?{...task,status,completed:status==='completed'}:task)})),
+    updatePreferences:preferences=>setData(current=>({...current,preferences:{...current.preferences,...preferences}})),
     importTimetable:blocks=>{
       let added=0;
       setData(current=>{const existing=new Set(current.schedule.map(item=>item.id));const fresh=blocks.filter(item=>!existing.has(item.id));added=fresh.length;return {...current,schedule:[...current.schedule,...fresh].sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)),timetableImported:true};});

@@ -30,20 +30,23 @@ export const makeInitialSchedule = (): ScheduleBlock[] => [
   block('saturday-project','React Hackathon Project','Deep Work',saturdayDate,'10:00','12:00','Weekend build session with a clear stop time.'),
   block('saturday-social','Brunch with friends','Social',saturdayDate,'12:30','14:00','Social time is part of a balanced week.'),
 ];
-export const makeFestivalProposal = (schedule:ScheduleBlock[]):ScheduleProposal => {
+export const makeFestivalProposal = (schedule:ScheduleBlock[],minimumSleepHours=7.5):ScheduleProposal => {
   const adjusted=schedule.map(item=>item.id==='tomorrow-dbms'?{...item,date:saturdayDate,start:'09:00',end:'10:30',why:'Moved out of festival day; a calm morning slot protects the deadline.'}:item.id==='tomorrow-project'?{...item,date:saturdayDate,start:'10:45',end:'12:45',why:'Moved to Saturday morning so your festival stays truly free.'}:item);
   adjusted.push(block('festival-protected','College festival','Social',tomorrowDate,'17:00','22:00','Protected social time — the schedule now works around your festival.',{protected:true}));
   return {id:'proposal-festival',scenario:'College festival tomorrow 5–10 PM',summary:'Your festival is protected. Two flexible study blocks move to Saturday morning, while sleep and fixed lectures stay untouched.',reasoning:'I found 4 commitments on festival day. I moved flexible study, kept the fixed Operating Systems lecture, and left your evening open.',changes:[
     {id:'tomorrow-dbms',title:'DBMS assignment study',from:`Tomorrow · 10:00–12:00`,to:`${formatDay(saturdayDate)} · 09:00–10:30`,reason:'Moved earlier to keep the assignment on track.'},
     {id:'tomorrow-project',title:'React Hackathon Project',from:'Tomorrow · 14:00–16:00',to:`${formatDay(saturdayDate)} · 10:45–12:45`,reason:'Flexible deep work shifted away from festival time.'},
     {id:'festival-protected',title:'College festival',from:'Not scheduled',to:'Tomorrow · 17:00–22:00',reason:'Added and protected as social time.',protected:true},
-  ],protection:['College festival · 5 hours','7.5 hours sleep · protected'],schedule:adjusted};
+  ],protection:['College festival · 5 hours',`${minimumSleepHours} hours sleep · protected`],schedule:adjusted};
 };
 export const makeInitialData = ():StudentData => {
   const schedule=makeInitialSchedule();
   return {schedule,tasks:[
-    {id:'task-dbms',title:'Finish normalization problem set',category:'Academic',hours:1.5,deadline:tomorrowDate,preferredTime:'Morning',completed:false},
-    {id:'task-lab',title:'Prepare OS lab notes',category:'Academic',hours:1,deadline:shiftDate(2),preferredTime:'Flexible',completed:false},
-    {id:'task-personal',title:'Pick up groceries',category:'Personal',hours:.5,deadline:shiftDate(1),preferredTime:'Flexible',completed:false},
-  ],timetableImported:false,proposal:makeFestivalProposal(schedule)};
+    {id:'task-dbms',title:'Finish normalization problem set',category:'Academic',hours:1.5,deadline:tomorrowDate,preferredTime:'Morning',completed:false,status:'today',priority:'high'},
+    {id:'task-lab',title:'Prepare OS lab notes',category:'Academic',hours:1,deadline:shiftDate(2),preferredTime:'Flexible',completed:false,status:'in-progress',priority:'normal'},
+    {id:'task-personal',title:'Pick up groceries',category:'Personal',hours:.5,deadline:shiftDate(1),preferredTime:'Flexible',completed:false,status:'backlog',priority:'low'},
+  ],attendance:[
+    {id:'dbms-attendance',subject:'Database Systems',percentage:82,safeThreshold:75},
+    {id:'os-attendance',subject:'Operating Systems',percentage:74,safeThreshold:75,sessionsUntilAlert:1},
+  ],preferences:{energyPreference:'Morning Person',minimumSleepHours:7.5,commuteBufferMinutes:15},timetableImported:false,proposal:makeFestivalProposal(schedule)};
 };

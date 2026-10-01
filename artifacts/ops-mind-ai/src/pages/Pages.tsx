@@ -1,224 +1,119 @@
-import { useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Activity, AlertCircle, ArrowRightLeft, Check, CheckCircle2, Clock3, Coffee, Dumbbell, FileUp, Heart, Info, LoaderCircle, Moon, Plus, RotateCcw, Sparkles, Sun, Target, WandSparkles, X } from 'lucide-react';
+import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useForm } from 'react-hook-form';
+import { Form } from '@/components/ui/form';
+import { Activity, AlertCircle, ArrowLeftRight, CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, FileUp, Heart, Info, LoaderCircle, Moon, Plus, Sparkles, Sun, Target, WandSparkles, X } from 'lucide-react';
+import { Link } from 'wouter';
 import { useOps } from '../context/OpsContext';
-import type { BlockCategory, PreferredTime, ScheduleBlock, ScheduleProposal, StudentTask } from '../data/model';
+import type { BlockCategory, PreferredTime, ScheduleBlock, ScheduleProposal, StudentTask, TaskStatus } from '../data/model';
 import { formatDay, localDate, saturdayDate, tomorrowDate } from '../data/seed';
 import { analyzeScheduleScenario, simulateTimetableOCR } from '../services/aiService';
 
-type ModalKind='commitment'|'goal'|'upload'|null;
+const cx=(...names:(string|false|undefined)[])=>names.filter(Boolean).join(' ');
 const categoryClass=(category:BlockCategory)=>category.toLowerCase().replace(/\s+/g,'-');
-const timeLabel=(time:string)=>{const [h,m]=time.split(':').map(Number);const hour=h%12||12;return `${hour}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;};
+const timeLabel=(time:string)=>{const [h,m]=time.split(':').map(Number);return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;};
 const timeAfterHours=(start:string,hours:number)=>{const [h,m]=start.split(':').map(Number);const total=h*60+m+hours*60;return `${String(Math.floor(total/60)%24).padStart(2,'0')}:${String(Math.round(total%60)).padStart(2,'0')}`;};
+const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const titleFor=(path:string)=>({'/':'Your schedule','/reschedule':'Adaptive rescheduler','/tasks':'Goals & tasks','/analytics':'Balance & analytics','/settings':'Timetable & setup'}[path]||'Your planner');
 
-export function DashboardPage(){
-  const {data,toast,setProposal,applyProposal,toggleBlock,addBlock,addTask,toggleTask,importTimetable}=useOps();
-  const [day,setDay]=useState(localDate);
-  const [scenario,setScenario]=useState('');
-  const [analyzing,setAnalyzing]=useState(false);
-  const [modal,setModal]=useState<ModalKind>(null);
-  const [whyBlock,setWhyBlock]=useState<ScheduleBlock|null>(null);
-  const [uploading,setUploading]=useState(false);
-  const [uploadError,setUploadError]=useState('');
-  const fileRef=useRef<HTMLInputElement>(null);
-  const scenarioRef=useRef<HTMLInputElement>(null);
-  const festivalApplied=data.schedule.some(item=>item.id==='festival-protected');
-  const balance=festivalApplied?'91%':'88%';
-  const dayBlocks=useMemo(()=>data.schedule.filter(item=>item.date===day).sort((a,b)=>a.start.localeCompare(b.start)),[data.schedule,day]);
-  const dayTasks=data.tasks.filter(task=>task.deadline===day);
-  const submitScenario=async(text=scenario)=>{
-    if(!text.trim()){scenarioRef.current?.focus();toast('Add a situation first','Tell TimeOS what changed in your day.','info');return;}
-    setScenario(text);setAnalyzing(true);setProposal(null);
-    try{const proposal=await analyzeScheduleScenario(text,data.schedule);setProposal(proposal);}
-    catch{toast('Could not build a proposal','Your live schedule is unchanged. Try a shorter description.','info');}
-    finally{setAnalyzing(false);}
-  };
-  const apply=()=>{applyProposal();toast('Plan updated','Your new schedule is saved. Festival time and 7.5 hours of sleep are protected.');};
-  const discard=()=>{setProposal(null);toast('Proposal discarded','Your current schedule was left exactly as it was.','info');};
-  const handleTimetable=async(fileName?:string)=>{
-    setUploading(true);setUploadError('');
-    try{
-      const parsed=await simulateTimetableOCR(fileName);
-      const existing=new Set(data.schedule.map(item=>item.id));
-      const count=parsed.filter(item=>!existing.has(item.id)).length;
-      importTimetable(parsed);
-      setModal(null);
-      toast(count?'Timetable parsed':'Nothing new to add',count?`${count} lecture blocks added for ${formatDay(tomorrowDate)}.`:'These lecture blocks are already in your planner.',count?'success':'info');
-    }catch{setUploadError('We could not read that file. Try a PDF, image, or the sample timetable.');}
-    finally{setUploading(false);}
-  };
-  const submitCommitment=(event:FormEvent<HTMLFormElement>)=>{
-    event.preventDefault();const form=new FormData(event.currentTarget);const title=String(form.get('title')||'').trim();
-    if(!title){toast('Name your commitment','A short title helps your plan stay clear.','info');return;}
-    const date=String(form.get('date')||localDate),start=String(form.get('start')||'18:00'),duration=Number(form.get('duration')||1);
-    const [h,m]=start.split(':').map(Number),endM=h*60+m+duration*60,end=`${String(Math.floor(endM/60)%24).padStart(2,'0')}:${String(endM%60).padStart(2,'0')}`;
-    const category=String(form.get('category')||'Social') as BlockCategory;
-    addBlock({id:`commitment-${Date.now()}`,title,category,date,start,end,why:'Added by you; TimeOS will plan around this commitment.',completed:false,protected:category==='Social'||category==='Personal',source:'commitment'});
-    setModal(null);toast('Commitment added',`${title} is on your schedule.`);
-  };
-  const submitGoal=(event:FormEvent<HTMLFormElement>)=>{
-    event.preventDefault();const form=new FormData(event.currentTarget);const title=String(form.get('title')||'').trim();
-    if(!title){toast('Add a goal title','Give your next step a clear name.','info');return;}
-    const category=String(form.get('category')||'Deep Work') as BlockCategory;
-    const hours=Math.max(.5,Number(form.get('hours')||1)),deadline=String(form.get('deadline')||tomorrowDate),preferred=String(form.get('preferred')||'Flexible') as PreferredTime;
-    const candidates=preferred==='Morning'?['08:00','10:00','11:00']:preferred==='Night Owl'?['19:00','20:00','21:00']:['16:30','10:00','19:00'];
-    const scheduledDate=deadline===localDate?localDate:tomorrowDate;
-    const start=candidates.find(candidate=>{const end=timeAfterHours(candidate,hours);return !data.schedule.some(item=>item.date===scheduledDate&&candidate<item.end&&end>item.start);})||'16:30';
-    const end=timeAfterHours(start,hours);
-    const id=`goal-${Date.now()}`;
-    const task:StudentTask={id,title,category,hours,deadline,preferredTime:preferred,completed:false};
-    const block:ScheduleBlock={id:`block-${id}`,title,category,date:scheduledDate,start,end,why:`Scheduled in a ${preferred.toLowerCase()} window with room before your deadline.`,completed:false,source:'goal'};
-    addTask(task,block);setModal(null);setDay(scheduledDate);toast('Goal added to your plan',`${title} · ${hours} ${hours===1?'hour':'hours'} scheduled.`);
-  };
-  const dayTabs=[{date:localDate,label:'Today'},{date:tomorrowDate,label:'Tomorrow'},{date:saturdayDate,label:'Weekend'}];
+export function SchedulePage(){
+  const {data,toast,toggleBlock,addBlock}=useOps();
+  const [day,setDay]=useState(localDate),[weekly,setWeekly]=useState(false),[weekOffset,setWeekOffset]=useState(0),[why,setWhy]=useState<ScheduleBlock|null>(null),[showAdd,setShowAdd]=useState(false);
+  const blocks=useMemo(()=>data.schedule.filter(b=>b.date===day).sort((a,b)=>a.start.localeCompare(b.start)),[data.schedule,day]);
+  const weekStart=useMemo(()=>{const d=new Date(`${localDate}T12:00:00`);d.setDate(d.getDate()-((d.getDay()+6)%7));return d;},[]);
+  const weekDates=useMemo(()=>Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(d.getDate()+weekOffset*7+i);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}),[weekStart,weekOffset]);
   return <main className="page">
-    <section className="welcome-row">
-      <div><div className="eyebrow">Your day, with room to be human</div><h1 className="page-title">Good morning. Let’s make today yours.</h1><p className="page-subtitle">A steady plan for your classes, ambitions, energy—and the life happening around them.</p></div>
-      <div className="action-row">
-        <button className="button-secondary" onClick={()=>setModal('commitment')} data-testid="button-add-commitment"><Plus size={15}/> Add Commitment</button>
-        <button className="button-primary" onClick={()=>{scenarioRef.current?.focus();document.getElementById('adaptive-planner')?.scrollIntoView({behavior:'smooth',block:'center'});}} data-testid="button-what-if"><Sparkles size={15}/> What-If Simulator</button>
-      </div>
+    <header className="welcome-row"><div><div className="eyebrow">A plan with room to breathe</div><h1 className="page-title">{day===localDate?'Make today yours.':`Your plan for ${formatDay(day)}.`}</h1><p className="page-subtitle">Classes, focus, and the parts of life that make the week yours.</p></div><div className="action-row"><button className="button-secondary" onClick={()=>setShowAdd(true)} data-testid="button-add-commitment"><Plus size={15}/> Add commitment</button><Link href="/reschedule" className="button-primary" data-testid="link-open-rescheduler"><WandSparkles size={15}/> Replan my day</Link></div></header>
+    <section className="stats-grid" aria-label="Planner status">
+      <StatCard icon={<Activity size={17}/>} tone="indigo" label="Today’s energy" value="High Focus" detail="Best window · 2–4 PM"/>
+      <StatCard icon={<Target size={17}/>} tone="amber" label="Weekly balance" value="88%" detail="Across the whole week"/>
+      <StatCard icon={<Moon size={17}/>} tone="emerald" label="Sleep protected" value={`${data.preferences.minimumSleepHours} hours`} detail="Every night, no trade-offs"/>
     </section>
-    <section className="stats-grid" aria-label="Your weekly wellbeing indicators">
-      <StatCard icon={<Activity size={17}/>} tone="indigo" label="Energy state" value="High Focus ⚡" detail="Best window · 2–4 PM"/>
-      <StatCard icon={<Target size={17}/>} tone="amber" label="Weekly balance" value={balance} detail="Across your whole week"/>
-      <StatCard icon={<Moon size={17}/>} tone="emerald" label="Protected sleep" value="7.5 hours" detail="Every night, no trade-offs"/>
-    </section>
-    <div className="workspace-grid">
-      <section className="column-stack" aria-label="Daily timeline and tasks">
-        <div className="card card-pad">
-          <div className="card-heading"><div><h2 className="card-title">Your day, at a glance</h2><p className="card-subtitle">{formatDay(day)} · 08:00–23:00</p></div>
-            <div className="day-switch" role="tablist" aria-label="Choose planner day">{dayTabs.map(tab=><button role="tab" aria-selected={day===tab.date} className={day===tab.date?'active':''} key={tab.label} onClick={()=>setDay(tab.date)} data-testid={`tab-day-${tab.label.toLowerCase()}`}>{tab.label}</button>)}</div>
-          </div>
-          {dayBlocks.length===0?<div className="empty-day"><Coffee size={17} style={{marginBottom:7}}/><br/>A little open space. Add a commitment or keep it free.</div>:<div className="timeline">
-            {Array.from({length:16},(_,index)=>8+index).map(hour=>{
-              const atHour=dayBlocks.filter(item=>Number(item.start.slice(0,2))===hour);
-              return <div className="timeline-row" key={hour}><span className="timeline-time">{String(hour).padStart(2,'0')}:00</span><div className="timeline-track">{atHour.map(item=><article key={item.id} className={`event-card ${categoryClass(item.category)} ${item.completed?'completed':''}`} data-testid={`event-${item.id}`}>
-                <div className="event-head"><span className="event-name">{item.title}</span><span className="event-clock">{timeLabel(item.start)}–{timeLabel(item.end)}</span></div>
-                <div className="event-meta"><span className="category-pill">{item.category}</span>{item.protected&&<span className="category-pill">Protected</span>}<span className="event-actions">
-                  <button className="micro-button" aria-label={`Why is ${item.title} scheduled here?`} title="Why is this scheduled here?" onClick={()=>setWhyBlock(item)} data-testid={`button-why-${item.id}`}><Info size={12}/></button>
-                  {item.category!=='Sleep'&&<button className="micro-button" aria-label={item.completed?`Mark ${item.title} incomplete`:`Complete ${item.title}`} title={item.completed?'Mark incomplete':'Mark complete'} onClick={()=>{toggleBlock(item.id);toast(item.completed?'Marked as planned':'Nice work — block complete',item.title,'success');}} data-testid={`button-complete-${item.id}`}><Check size={12}/></button>}
-                </span></div>
-              </article>)}</div></div>;
-            })}
-          </div>}
-          {day===localDate&&<div className="sleep-banner"><span><Moon size={14}/> Sleep stays protected</span><span>11:00 PM – 7:00 AM · 7.5h</span></div>}
-          {day!==localDate&&dayBlocks.some(item=>item.id==='festival-protected')&&<div className="sleep-banner" style={{background:'#fff1f2',borderColor:'#ffe4e6',color:'#be123c'}}><span><Heart size={14}/> Protected social time</span><span>Festival · 5:00–10:00 PM</span></div>}
-          <div className="timeline-foot"><span><Clock3 size={11} style={{verticalAlign:'-2px'}}/> Space between blocks is intentional</span><span>{dayBlocks.filter(item=>!item.completed).length} planned</span></div>
-        </div>
-        <div className="card card-pad">
-          <div className="card-heading"><div><h2 className="card-title">A few things on your mind</h2><p className="card-subtitle">Small steps, attached to real deadlines.</p></div><button className="button-quiet" onClick={()=>setModal('goal')} data-testid="button-add-goal"><Plus size={14}/> New goal / task</button></div>
-          {data.tasks.length===0?<div className="empty-day">No tasks yet. Add a goal when you are ready.</div>:<div className="attendance-list">{data.tasks.slice(0,5).map(task=><div key={task.id} className="attendance-item" data-testid={`task-${task.id}`}><div className="attendance-name" style={{textDecoration:task.completed?'line-through':'none',opacity:task.completed?.55:1}}>{task.title}</div><button className="micro-button" aria-label={task.completed?`Reopen ${task.title}`:`Complete ${task.title}`} onClick={()=>toggleTask(task.id)} data-testid={`button-task-complete-${task.id}`}>{task.completed?<CheckCircle2 size={14}/>:<Check size={14}/>}</button><div className="attendance-note" style={{gridColumn:'1/-1',color:'#94a3b8'}}>Due {formatDay(task.deadline)} · {task.hours}h · {task.preferredTime}</div></div>)}</div>}
-          <div className="secondary-tools"><button className="button-secondary" onClick={()=>setModal('upload')} data-testid="button-upload-timetable"><FileUp size={14}/> Upload timetable / syllabus</button><button className="button-secondary" onClick={()=>setModal('goal')} data-testid="button-add-new-task"><Plus size={14}/> Add new goal / task</button></div>
-        </div>
-      </section>
-      <section className="column-stack" aria-label="Adaptive rescheduling">
-        <div className="card proposal-card" id="adaptive-planner">
-          <div className="proposal-banner"><div className="proposal-topline"><span className="proposal-badge"><WandSparkles size={12}/> TIMEOS ADAPTIVE PLANNER</span>{data.proposal&&<span className="proposal-badge">Ready to review</span>}</div>
-            <h2 className="proposal-title">Life Happens: Adaptive Rescheduling</h2><p className="proposal-description">Plans can change. Tell me what happened and I’ll make room for it—not at the expense of your wellbeing.</p>
-          </div>
-          <form className="scenario-input-wrap" onSubmit={event=>{event.preventDefault();void submitScenario();}}>
-            <div className="scenario-input"><input ref={scenarioRef} value={scenario} onChange={event=>setScenario(event.target.value)} placeholder="What changed in your day?" aria-label="Describe a change to your schedule" data-testid="input-scenario"/><button className="button-primary" type="submit" disabled={analyzing} data-testid="button-submit-scenario">{analyzing?<LoaderCircle className="spin" size={14}/>:<ArrowRightLeft size={14}/>}<span>{analyzing?'Thinking':'Replan'}</span></button></div>
-          </form>
-          <div className="scenario-chips" aria-label="Try a scenario">
-            <button className="scenario-chip" onClick={()=>void submitScenario('College festival tomorrow 5–10 PM')} disabled={analyzing} data-testid="scenario-festival"><span>College festival tomorrow</span> · 5–10 PM</button>
-            <button className="scenario-chip" onClick={()=>void submitScenario('Feeling low energy today, defer heavy study')} disabled={analyzing} data-testid="scenario-low-energy"><span>Low energy today</span> · defer heavy study</button>
-            <button className="scenario-chip" onClick={()=>void submitScenario('DBMS assignment deadline moved up by 1 day')} disabled={analyzing} data-testid="scenario-deadline"><span>DBMS deadline moved up</span> · one day earlier</button>
-          </div>
-          <div className="proposal-content">
-            {analyzing?<div className="reasoning" role="status" aria-live="polite"><span className="reasoning-dot"/><span>Analyzing impact on 4 commitments… protecting the important parts of your day.</span></div>:data.proposal?<ProposalView proposal={data.proposal} onApply={apply} onDiscard={discard}/>:<div className="proposal-empty"><CheckCircle2 size={19} style={{marginBottom:8,color:'#10b981'}}/><br/>No pending changes. Your live schedule is safe.<br/><button className="button-quiet" onClick={()=>void submitScenario('College festival tomorrow 5–10 PM')} style={{marginTop:7}} data-testid="button-preview-festival"><RotateCcw size={12}/> Preview festival plan</button></div>}
-          </div>
-        </div>
-        <div className="card card-pad">
-          <div className="card-heading"><div><h2 className="card-title">A better kind of balance</h2><p className="card-subtitle">A week with room for all of you.</p></div><Heart size={16} color="#f43f5e"/></div>
-          <div className="balance-list">{[
-            ['Academic',35,'#6366f1'],['Skill building',25,'#f59e0b'],['Social / events',20,'#f43f5e'],['Sleep / rest',20,'#10b981'],
-          ].map(([label,value,color])=><div className="balance-row" key={label as string}><span className="balance-name">{label}</span><div className="balance-track" role="meter" aria-label={`${label} weekly balance`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Number(value)}><div className="balance-fill" style={{width:`${value}%`,background:color as string}}/></div><span className="balance-value">{value}%</span></div>)}</div>
-        </div>
-      </section>
-      <aside className="column-stack balance-column" aria-label="Student balance and energy insights">
-        <div className="card card-pad">
-          <div className="card-heading"><div><h2 className="card-title">Attendance pulse</h2><p className="card-subtitle">Stay curious, keep a little margin.</p></div><CheckCircle2 size={16} color="#10b981"/></div>
-          <div className="attendance-list">
-            <div className="attendance-item"><span className="attendance-name">Database Systems</span><span className="attendance-state">82% · Safe</span><div className="attendance-bar" role="meter" aria-label="Database Systems attendance" aria-valuemin={0} aria-valuemax={100} aria-valuenow={82}><div className="attendance-fill" style={{width:'82%'}}/></div></div>
-            <div className="attendance-item"><span className="attendance-name">Operating Systems</span><span className="attendance-state caution">74% · Watch</span><div className="attendance-bar" role="meter" aria-label="Operating Systems attendance" aria-valuemin={0} aria-valuemax={100} aria-valuenow={74}><div className="attendance-fill caution" style={{width:'74%'}}/></div><span className="attendance-note"><AlertCircle size={11} style={{verticalAlign:'-2px'}}/> One absence away from a low-attendance alert</span></div>
-          </div>
-        </div>
-        <div className="card card-pad">
-          <div className="card-heading"><div><h2 className="card-title">Energy & study load</h2><p className="card-subtitle">A gentle guide, not a grade.</p></div><Activity size={16} color="#6366f1"/></div>
-          <EnergyChart/>
-          <p className="energy-note">Your clearest thinking tends to arrive mid-afternoon. Hard things get the high-energy hours; recovery remains part of the plan.</p>
-        </div>
-        <div className="card card-pad">
-          <div className="card-heading"><div><h2 className="card-title">A little breathing room</h2><p className="card-subtitle">The plan leaves space on purpose.</p></div><Sun size={16} color="#f59e0b"/></div>
-          <p className="energy-note" style={{marginTop:0}}>Meals, transitions and a quiet evening aren’t gaps to fill. They are what make a busy week sustainable.</p>
-          <div className="secondary-tools"><button className="button-secondary" onClick={()=>toast('Nice work showing up','A completed block stays part of your local history.','info')} data-testid="button-wellbeing-tip"><Dumbbell size={14}/> Wellbeing note</button></div>
-        </div>
-      </aside>
-    </div>
-    {modal==='commitment'&&<Dialog title="Add a commitment" subtitle="A class, a plan with friends, or anything else you want your week to respect." onClose={()=>setModal(null)}><form onSubmit={submitCommitment}>
-      <div className="form-grid">
-        <Field label="What is it?" full><input name="title" placeholder="e.g. Dinner with friends" required data-testid="input-commitment-title"/></Field>
-        <Field label="Category"><select name="category" defaultValue="Social" data-testid="select-commitment-category"><option>Academic</option><option>Deep Work</option><option>Wellness</option><option>Social</option><option>Personal</option></select></Field>
-        <Field label="Date"><input type="date" name="date" defaultValue={localDate} required data-testid="input-commitment-date"/></Field>
-        <Field label="Start time"><input type="time" name="start" defaultValue="18:00" required data-testid="input-commitment-start"/></Field>
-        <Field label="How long?"><select name="duration" defaultValue="1" data-testid="select-commitment-duration"><option value=".5">30 minutes</option><option value="1">1 hour</option><option value="1.5">1.5 hours</option><option value="2">2 hours</option><option value="3">3 hours</option></select></Field>
-      </div><ModalFooter onCancel={()=>setModal(null)} submitLabel="Add to my day"/>
-    </form></Dialog>}
-    {modal==='goal'&&<Dialog title="Add a new goal or task" subtitle="Give it a realistic time slot. Your plan will find a sensible place near the deadline." onClose={()=>setModal(null)}><form onSubmit={submitGoal}>
-      <div className="form-grid">
-        <Field label="Goal or task" full><input name="title" placeholder="e.g. Draft the DBMS report" required data-testid="input-goal-title"/></Field>
-        <Field label="Category"><select name="category" defaultValue="Deep Work" data-testid="select-goal-category"><option>Academic</option><option>Deep Work</option><option>Wellness</option><option>Social</option><option>Personal</option></select></Field>
-        <Field label="Estimated hours"><input type="number" name="hours" min=".5" max="8" step=".5" defaultValue="1" required data-testid="input-goal-hours"/></Field>
-        <Field label="Deadline"><input type="date" name="deadline" min={localDate} defaultValue={tomorrowDate} required data-testid="input-goal-deadline"/></Field>
-        <Field label="Preferred time"><select name="preferred" defaultValue="Flexible" data-testid="select-goal-preferred"><option>Morning</option><option>Night Owl</option><option>Flexible</option></select></Field>
-      </div><div className="modal-note">TimeOS places this block around your existing commitments. You can still move it later by changing the plan.</div><ModalFooter onCancel={()=>setModal(null)} submitLabel="Add goal to schedule"/>
-    </form></Dialog>}
-    {modal==='upload'&&<Dialog title="Upload timetable / syllabus" subtitle="A local OCR simulation reads a sample of your course timetable. Nothing is uploaded." onClose={()=>!uploading&&setModal(null)}>
-      <div className="upload-zone"><FileUp size={24} color="#6366f1" style={{margin:'0 auto'}}/><strong>{uploading?'Reading timetable…':'Drop your timetable here'}</strong><p>Choose a photo or PDF. OCR runs locally in this demo.</p>
-        <button className="button-secondary" disabled={uploading} onClick={()=>fileRef.current?.click()} data-testid="button-choose-timetable">{uploading?<LoaderCircle className="spin" size={14}/>:<Plus size={14}/>} Choose image or PDF</button>
+    <section className="card card-pad">
+      <div className="card-heading"><div><h2 className="card-title">Your timeline</h2><p className="card-subtitle">{weekly?'A week at a glance':`${formatDay(day)} · 8:00 AM–11:00 PM`}</p></div>
+        <div className="action-row">{weekly&&<div className="week-pager" aria-label="Navigate weeks"><button className="micro-button" aria-label="Previous week" onClick={()=>setWeekOffset(offset=>offset-1)} data-testid="button-previous-week"><ChevronLeft size={15}/></button><span>{formatDay(weekDates[0])} – {formatDay(weekDates[6])}</span><button className="micro-button" aria-label="Next week" onClick={()=>setWeekOffset(offset=>offset+1)} data-testid="button-next-week"><ChevronRight size={15}/></button></div>}<div className="day-switch" role="tablist" aria-label="Choose planner date">{[{date:localDate,label:'Today'},{date:tomorrowDate,label:'Tomorrow'},{date:saturdayDate,label:'Weekend'}].map(tab=><button role="tab" aria-selected={day===tab.date} className={day===tab.date?'active':''} key={tab.date} onClick={()=>{setDay(tab.date);setWeekly(false);}} data-testid={`tab-day-${tab.label.toLowerCase()}`}>{tab.label}</button>)}</div><button className="button-quiet" onClick={()=>setWeekly(v=>!v)} data-testid="button-toggle-week">{weekly?'Daily view':'Week view'}</button></div>
       </div>
-      <input ref={fileRef} hidden type="file" accept="image/*,.pdf,application/pdf" aria-label="Choose timetable image or PDF" onChange={event=>{const file=event.currentTarget.files?.[0];if(file)void handleTimetable(file.name);event.currentTarget.value='';}} data-testid="input-timetable-file"/>
-      {uploadError&&<p role="alert" style={{fontSize:11,color:'#be123c'}}>{uploadError}</p>}
-      <button className="button-secondary sample-option" disabled={uploading} onClick={()=>void handleTimetable('Sample university timetable')} data-testid="button-sample-timetable">{uploading?<><LoaderCircle className="spin" size={14}/> Simulating OCR…</>:<><Sparkles size={14}/> Use sample university timetable</>}</button>
-      <div className="modal-note">Sample parse: Database Systems · Operating Systems · HCI Studio · Discrete Mathematics. Repeated imports are safely deduplicated.</div>
-    </Dialog>}
-    {whyBlock&&<Dialog title="Why this time?" subtitle={whyBlock.title} onClose={()=>setWhyBlock(null)}><div className="reasoning" style={{lineHeight:1.5}}><Sparkles size={15}/><span>{whyBlock.why}</span></div><div className="sleep-banner"><span><Clock3 size={14}/> {formatDay(whyBlock.date)}</span><span>{timeLabel(whyBlock.start)}–{timeLabel(whyBlock.end)}</span></div><ModalFooter onCancel={()=>setWhyBlock(null)} cancelLabel="Got it"/></Dialog>}
+      {weekly?<WeeklyCalendar dates={weekDates} schedule={data.schedule} onSelect={date=>{setDay(date);setWeekly(false);}}/>:<>
+        {blocks.length===0?<div className="empty-day"><CalendarDays size={19}/><p>This day has some open space.</p><button className="button-secondary" onClick={()=>setShowAdd(true)} data-testid="button-empty-add">Add a commitment</button></div>:<div className="timeline">{Array.from({length:16},(_,i)=>8+i).map(hour=><div className="timeline-row" key={hour}><span className="timeline-time">{String(hour).padStart(2,'0')}:00</span><div className="timeline-track">{blocks.filter(b=>Number(b.start.slice(0,2))===hour).map(item=><article key={item.id} className={`event-card ${categoryClass(item.category)} ${item.completed?'completed':''}`} data-testid={`event-${item.id}`}><div className="event-head"><span className="event-name">{item.title}</span><span className="event-clock">{timeLabel(item.start)}–{timeLabel(item.end)}</span></div><div className="event-meta"><span className="category-pill">{item.category}</span>{item.protected&&<span className="category-pill">Protected</span>}<span className="event-actions"><button className="micro-button" aria-label={`Why is ${item.title} scheduled here?`} onClick={()=>setWhy(item)} data-testid={`button-why-${item.id}`}><Info size={13}/></button>{item.category!=='Sleep'&&<button className="micro-button" aria-label={item.completed?'Mark incomplete':'Complete block'} onClick={()=>{toggleBlock(item.id);toast(item.completed?'Block reopened':'Block complete',item.title);}} data-testid={`button-complete-${item.id}`}><Check size={13}/></button>}</span></div></article>)}</div></div>)}</div>}
+        <div className="sleep-banner"><span><Moon size={14}/> Sleep stays protected</span><span>11:00 PM – 7:00 AM · {data.preferences.minimumSleepHours}h</span></div><div className="timeline-foot"><span><Clock3 size={11}/> Space between blocks is intentional</span><span>{blocks.filter(b=>!b.completed&&b.category!=='Sleep').length} planned</span></div>
+      </>}
+    </section>
+    <div className="secondary-tools"><span className="page-subtitle">Want to make a change?</span><Link href="/reschedule" className="button-secondary" data-testid="link-reschedule-from-schedule"><WandSparkles size={14}/> Try an adaptive replan</Link><Link href="/tasks" className="button-secondary" data-testid="link-tasks-from-schedule"><CheckCircle2 size={14}/> See your tasks</Link></div>
+    {why&&<Dialog title="Why this time?" subtitle={why.title} onClose={()=>setWhy(null)}><div className="reasoning"><Sparkles size={15}/>{why.why}</div><div className="sleep-banner"><span><Clock3 size={14}/>{formatDay(why.date)}</span><span>{timeLabel(why.start)}–{timeLabel(why.end)}</span></div><div className="modal-foot"><button className="button-primary" onClick={()=>setWhy(null)} data-testid="button-close-explanation">Got it</button></div></Dialog>}
+    {showAdd&&<CommitmentDialog defaultDate={day} onClose={()=>setShowAdd(false)} onSave={values=>{const end=timeAfterHours(values.start,values.duration);addBlock({id:`commitment-${Date.now()}`,title:values.title.trim(),category:values.category,date:values.date,start:values.start,end,why:'Added by you; your planner will make room for this commitment.',completed:false,protected:values.category==='Social'||values.category==='Personal',source:'commitment'});setShowAdd(false);setDay(values.date);toast('Commitment added',`${values.title} is on your schedule.`);}}/>}
   </main>;
 }
-function StatCard({icon,tone,label,value,detail}:{icon:ReactNode;tone:string;label:string;value:string;detail:string}){
-  return <div className="card stat-card"><span className={`stat-icon ${tone}`}>{icon}</span><div><div className="stat-label">{label}</div><div className="stat-value">{value}</div></div><span className="stat-detail">{detail}</span></div>;
+
+export function ReschedulePage(){
+  const {data,toast,setProposal,applyProposal}=useOps();const [text,setText]=useState(''),[busy,setBusy]=useState(false);
+  const input=useRef<HTMLInputElement>(null);
+  const run=async(value=text)=>{if(!value.trim()){input.current?.focus();toast('Tell me what changed','A short description is enough.','info');return;}setText(value);setBusy(true);setProposal(null);try{const analyze=analyzeScheduleScenario as (scenario:string,schedule:ScheduleBlock[],minimumSleepHours:number)=>Promise<ScheduleProposal>;setProposal(await analyze(value,data.schedule,data.preferences.minimumSleepHours));}catch{toast('Could not build a proposal','Your current schedule is unchanged. Try a shorter description.','info');}finally{setBusy(false);}};
+  const discard=()=>{setProposal(null);toast('Proposal set aside','Your existing plan is unchanged.','info');};
+  const apply=()=>{applyProposal();toast('Plan updated',`Your new schedule is saved, with ${data.preferences.minimumSleepHours} hours of sleep protected.`);};
+  const scenarios=[['College festival tomorrow','College festival tomorrow 5–10 PM','scenario-festival'],['Low energy today','Feeling low energy today, defer heavy study','scenario-low-energy'],['DBMS deadline moved up','DBMS assignment deadline moved up by 1 day','scenario-deadline']];
+  return <main className="page"><PageIntro eyebrow="Plans can flex" title="When life changes, your plan can too." subtitle="Tell TimeOS what shifted. It will find room without borrowing from your rest."/>
+    <section className="card proposal-card"><div className="proposal-banner"><div className="proposal-topline"><span className="proposal-badge"><WandSparkles size={12}/> ADAPTIVE PLANNER</span>{data.proposal&&<span className="proposal-badge">Ready to review</span>}</div><h2 className="proposal-title">What changed?</h2><p className="proposal-description">Describe the new commitment, energy shift, or deadline. Your schedule stays untouched until you apply.</p></div>
+      <form className="scenario-input-wrap" onSubmit={e=>{e.preventDefault();void run();}}><div className="scenario-input"><input ref={input} value={text} onChange={e=>setText(e.target.value)} placeholder="e.g. I have a club event tomorrow evening" aria-label="Describe a change to your schedule" data-testid="input-scenario"/><button className="button-primary" type="submit" disabled={busy} data-testid="button-submit-scenario">{busy?<LoaderCircle className="spin" size={14}/>:<ArrowLeftRight size={14}/>} {busy?'Thinking':'Build a plan'}</button></div></form>
+      <div className="scenario-chips" aria-label="Try a scenario">{scenarios.map(([label,value,id])=><button className="scenario-chip" key={id} onClick={()=>void run(value)} disabled={busy} data-testid={id}><span>{label}</span><span> · try scenario</span></button>)}</div>
+      <div className="proposal-content">{busy?<div className="reasoning" role="status"><span className="reasoning-dot"/>Looking at your commitments, deadlines, and protected rest…</div>:data.proposal?<ProposalView proposal={data.proposal} onApply={apply} onDiscard={discard}/>:<div className="proposal-empty"><CheckCircle2 size={20}/><p>Your current plan is safe. Nothing changes until you approve a proposal.</p><button className="button-quiet" onClick={()=>void run(scenarios[0][1])} data-testid="button-preview-festival"><Sparkles size={13}/> Preview a festival plan</button></div>}</div>
+    </section><p className="page-subtitle" style={{marginTop:14}}>Your fixed classes, minimum sleep, and protected personal time are treated as real commitments.</p>
+  </main>;
 }
-function ProposalView({proposal,onApply,onDiscard}:{proposal:ScheduleProposal;onApply:()=>void;onDiscard:()=>void}){
-  return <>
-    <div className="reasoning"><span className="reasoning-dot"/><span>{proposal.reasoning}</span></div>
-    <div className="diff-label">Your schedule · before & after</div>
-    <div className="diff-grid">
-      <div className="diff-col"><h4>Current plan</h4>{proposal.changes.map(change=><div className="diff-item" key={change.id}><strong>{change.title}</strong>{change.from}</div>)}</div>
-      <div className="diff-col new"><h4>Proposed plan</h4>{proposal.changes.map(change=><div className="diff-item" key={change.id}><strong>{change.title}</strong><em>{change.to}</em><br/>{change.reason}</div>)}</div>
-    </div>
-    <p className="page-subtitle" style={{fontSize:10,margin:'10px 0 0'}}>{proposal.summary}</p>
-    <div className="protection-row">{proposal.protection.map((label,index)=><span className={`protection ${label.toLowerCase().includes('sleep')?'sleep-protect':''}`} key={`${label}-${index}`}>{label.toLowerCase().includes('sleep')?<Moon size={11}/>:<Heart size={11}/>} {label}</span>)}</div>
-    <div className="proposal-actions"><button className="button-secondary" onClick={onDiscard} data-testid="button-discard-proposal"><X size={14}/> Discard</button><button className="button-primary" onClick={onApply} data-testid="button-apply-proposal"><Check size={14}/> Apply Changes</button></div>
-  </>;
+
+export function TasksPage(){
+  const {data,toast,addTask,setTaskStatus,toggleTask}=useOps();const [addOpen,setAddOpen]=useState(false);
+  const lanes:[TaskStatus,string][]=[['backlog','Backlog'],['today','Today'],['in-progress','In progress'],['completed','Completed']];
+  const tasksFor=(status:TaskStatus)=>data.tasks.filter(t=>(t.status??(t.completed?'completed':t.deadline===localDate?'today':'backlog'))===status);
+  return <main className="page"><PageIntro eyebrow="Goals, with a next step" title="Make progress feel manageable." subtitle="Keep the important things visible, and move work at a pace that fits your week." action={<button className="button-primary" onClick={()=>setAddOpen(true)} data-testid="button-add-goal"><Plus size={15}/> Add a goal or task</button>}/>
+    <div className="task-board">{lanes.map(([status,label])=><section className="task-lane" key={status} data-testid={`lane-${status}`}><h2 className="lane-head">{label}<span className="lane-count">{tasksFor(status).length}</span></h2>{tasksFor(status).map(task=><TaskCard key={task.id} task={task} onStatus={setTaskStatus} onToggle={()=>{toggleTask(task.id);toast(task.completed?'Task reopened':'Task complete',task.title);}}/>)}{tasksFor(status).length===0&&<div className="empty-day" style={{padding:15}}>Nothing here yet.</div>}</section>)}</div>
+    <p className="page-subtitle" style={{marginTop:17}}>Deadlines stay attached as tasks move between lists.</p>
+    {addOpen&&<TaskDialog defaultPreferred={data.preferences.energyPreference==='Morning Person'?'Morning':'Night Owl'} onClose={()=>setAddOpen(false)} onSave={task=>{const preferred=task.preferredTime;const starts=preferred==='Morning'?['09:00','10:00']:preferred==='Night Owl'?['19:00','20:00']:['16:00','10:00'];const start=starts[0],end=timeAfterHours(start,task.hours);const block:ScheduleBlock={id:`block-${task.id}`,title:task.title,category:task.category,date:task.deadline,start,end,why:`A ${preferred.toLowerCase()} window reserved for this goal.`,completed:false,source:'goal'};addTask(task,block);setAddOpen(false);toast('Goal added',`${task.title} is now in your plan.`);}}/>}
+  </main>;
 }
-function EnergyChart(){
-  return <div aria-label="Energy peaks at 2 PM, while study load is balanced across the day" role="img">
-    <svg className="energy-chart" viewBox="0 0 330 135" preserveAspectRatio="none">
-      <defs><linearGradient id="energy-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#6366f1" stopOpacity=".17"/><stop offset="100%" stopColor="#6366f1" stopOpacity="0"/></linearGradient></defs>
-      {[24,53,82,111].map(y=><line key={y} x1="28" x2="320" y1={y} y2={y} stroke="#edf1f6" strokeDasharray="3 4"/>)}<line x1="28" x2="28" y1="14" y2="112" stroke="#e2e8f0"/>
-      <path d="M28 83 C55 76 61 43 92 44 S130 58 151 37 S190 22 210 30 S244 59 265 66 S294 78 320 81 L320 112 L28 112Z" fill="url(#energy-area)"/>
-      <path d="M28 83 C55 76 61 43 92 44 S130 58 151 37 S190 22 210 30 S244 59 265 66 S294 78 320 81" fill="none" stroke="#6366f1" strokeWidth="2.5" strokeLinecap="round"/>
-      <path d="M28 92 C60 89 70 80 92 75 S130 73 151 61 S189 67 210 54 S244 58 265 52 S295 60 320 57" fill="none" stroke="#f59e0b" strokeWidth="2" strokeDasharray="5 4" strokeLinecap="round"/>
-      {[[28,'8a'],[92,'11a'],[151,'2p'],[210,'5p'],[265,'8p'],[320,'11p']].map(([x,label])=><text key={String(x)} x={x as number} y="130" textAnchor="middle" fill="#94a3b8" fontSize="9">{label}</text>)}
-      <text x="4" y="24" fill="#94a3b8" fontSize="8">High</text><text x="8" y="110" fill="#94a3b8" fontSize="8">Low</text>
-    </svg>
-    <div className="chart-legend"><span><i className="legend-mark" style={{background:'#6366f1'}}/>Energy</span><span><i className="legend-mark" style={{background:'#f59e0b'}}/>Study load</span></div>
-  </div>;
+function TaskCard({task,onStatus,onToggle}:{task:StudentTask;onStatus:(id:string,status:TaskStatus)=>void;onToggle:()=>void}){
+  const status=task.status??(task.completed?'completed':task.deadline===localDate?'today':'backlog');
+  const overdue=task.deadline<localDate&&status!=='completed',dueToday=task.deadline===localDate;
+  return <article className="task-card" data-testid={`task-${task.id}`}><div className="task-card-title">{task.title}</div><div className="task-card-meta"><span>{task.category}</span><span>·</span><span>{task.hours}h</span><span>·</span><span className={cx(overdue&&'deadline-late',dueToday&&'deadline-today')}>{overdue?'Overdue':dueToday?'Due today':`Due ${formatDay(task.deadline)}`}</span></div><div className="task-card-meta"><span className={`priority ${task.priority??'normal'}`}>{task.priority??'normal'} priority</span><span>Best: {task.preferredTime}</span></div><div className="task-controls"><select aria-label={`Move ${task.title} to status`} value={status} onChange={e=>onStatus(task.id,e.target.value as TaskStatus)} data-testid={`select-task-status-${task.id}`}><option value="backlog">Backlog</option><option value="today">Today</option><option value="in-progress">In progress</option><option value="completed">Completed</option></select><button className="micro-button" aria-label={task.completed?'Reopen task':'Mark task complete'} onClick={onToggle} data-testid={`button-task-complete-${task.id}`}>{task.completed?<CheckCircle2 size={14}/>:<Check size={14}/>}</button></div></article>;
 }
-function Dialog({title,subtitle,onClose,children}:{title:string;subtitle?:string;onClose:()=>void;children:ReactNode}){
-  return <div className="modal-backdrop" role="presentation" onMouseDown={event=>{if(event.currentTarget===event.target)onClose();}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header className="modal-head"><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div><button className="modal-close" aria-label="Close dialog" onClick={onClose} data-testid="button-close-dialog"><X size={16}/></button></header><div className="modal-body">{children}</div></section></div>;
+
+type NewTaskForm={title:string;category:BlockCategory;hours:number;deadline:string;preferredTime:PreferredTime;priority:'low'|'normal'|'high'};
+type CommitmentForm={title:string;category:BlockCategory;date:string;start:string;duration:number};
+function CommitmentDialog({defaultDate,onClose,onSave}:{defaultDate:string;onClose:()=>void;onSave:(values:CommitmentForm)=>void}){
+  const form=useForm<CommitmentForm>({defaultValues:{title:'',category:'Social',date:defaultDate,start:'18:00',duration:1}});
+  return <Dialog title="Add a commitment" subtitle="A class, a plan with friends, or anything else you want your week to respect." onClose={onClose}><Form {...form}><form onSubmit={form.handleSubmit(values=>onSave({...values,title:values.title.trim(),duration:Number(values.duration)}))}><div className="form-grid"><Field label="What is it?" full><input {...form.register('title',{required:true})} placeholder="e.g. Dinner with friends" data-testid="input-commitment-title"/></Field><Field label="Category"><select {...form.register('category')} data-testid="select-commitment-category"><option>Academic</option><option>Deep Work</option><option>Wellness</option><option>Social</option><option>Personal</option></select></Field><Field label="Date"><input type="date" {...form.register('date',{required:true})} data-testid="input-commitment-date"/></Field><Field label="Start time"><input type="time" {...form.register('start',{required:true})} data-testid="input-commitment-start"/></Field><Field label="Duration"><select {...form.register('duration',{valueAsNumber:true})} data-testid="select-commitment-duration"><option value={0.5}>30 minutes</option><option value={1}>1 hour</option><option value={1.5}>1.5 hours</option><option value={2}>2 hours</option><option value={3}>3 hours</option><option value={4}>4 hours</option></select></Field></div><p className="modal-note">Your commitment is saved with your plan and can be completed from the timeline.</p><div className="modal-foot"><button type="button" className="button-secondary" onClick={onClose} data-testid="button-cancel-modal">Cancel</button><button type="submit" className="button-primary" data-testid="button-save-commitment"><Check size={14}/> Add commitment</button></div></form></Form></Dialog>;
 }
+function TaskDialog({onClose,onSave,defaultPreferred}:{onClose:()=>void;onSave:(task:StudentTask)=>void;defaultPreferred:PreferredTime}){
+  const form=useForm<NewTaskForm>({defaultValues:{title:'',category:'Academic',hours:1,deadline:tomorrowDate,preferredTime:defaultPreferred,priority:'normal'}});
+  return <Dialog title="Add a goal or task" subtitle="Give it a clear next step and a realistic amount of time." onClose={onClose}><Form {...form}><form onSubmit={form.handleSubmit(values=>{const id=`task-${Date.now()}`;onSave({...values,id,title:values.title.trim(),hours:Number(values.hours),completed:false,status:values.deadline===localDate?'today':'backlog'});})}><div className="form-grid"><Field label="Goal or task" full><input {...form.register('title',{required:true})} placeholder="e.g. Draft the DBMS report" data-testid="input-goal-title"/></Field><Field label="Category"><select {...form.register('category')} data-testid="select-goal-category"><option>Academic</option><option>Deep Work</option><option>Wellness</option><option>Social</option><option>Personal</option></select></Field><Field label="Estimated hours"><input type="number" min=".5" max="8" step=".5" {...form.register('hours',{valueAsNumber:true,min:.5})} data-testid="input-goal-hours"/></Field><Field label="Deadline"><input type="date" min={localDate} {...form.register('deadline')} data-testid="input-goal-deadline"/></Field><Field label="Preferred time"><select {...form.register('preferredTime')} data-testid="select-goal-preferred"><option>Morning</option><option>Night Owl</option><option>Flexible</option></select></Field><Field label="Priority"><select {...form.register('priority')} data-testid="select-goal-priority"><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option></select></Field></div><p className="modal-note">Your goal will be added to the board and placed on your schedule.</p><div className="modal-foot"><button type="button" className="button-secondary" onClick={onClose} data-testid="button-cancel-modal">Cancel</button><button type="submit" className="button-primary" data-testid="button-save-modal"><Check size={14}/> Add to my plan</button></div></form></Form></Dialog>;
+}
+
+export function AnalyticsPage(){
+  const {data}=useOps();const balance:[string,number,string][]=[['Academic',35,'#4b8c7d'],['Skill building',25,'#d3a747'],['Social / events',20,'#e78568'],['Sleep / rest',20,'#8db65b']];
+  return <main className="page"><PageIntro eyebrow="A whole-person view" title="Balance is part of the plan." subtitle="A gentle read on where your time and energy are going. Not a grade."/>
+    <div className="workspace-grid"><div className="column-stack"><section className="card card-pad"><div className="card-heading"><div><h2 className="card-title">Your weekly balance</h2><p className="card-subtitle">A week with room for all of you.</p></div><Heart size={18} color="#e78568"/></div><div className="balance-list">{balance.map(([label,value,color])=><div className="balance-row" key={label}><span className="balance-name">{label}</span><div className="balance-track" role="meter" aria-label={`${label} weekly balance`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}><div className="balance-fill" style={{width:`${value}%`,background:color}}/></div><span className="balance-value">{value}%</span></div>)}</div><p className="modal-note">TimeOS protects rest and social commitments alongside study—not after them.</p></section>
+      <section className="card card-pad"><div className="card-heading"><div><h2 className="card-title">Energy & study load</h2><p className="card-subtitle">A gentle guide, not a grade.</p></div><Activity size={17} color="#4b8c7d"/></div><EnergyChart/><p className="energy-note">Your clearest thinking tends to arrive mid-afternoon. Hard things get high-energy hours; recovery stays part of the plan.</p></section></div>
+      <div className="column-stack"><section className="card card-pad"><div className="card-heading"><div><h2 className="card-title">Attendance pulse</h2><p className="card-subtitle">Stay curious, keep a little margin.</p></div><CheckCircle2 size={17} color="#6d9c52"/></div>{data.attendance.length?<div className="attendance-list">{data.attendance.map(record=>{const safe=record.percentage>=record.safeThreshold;return <div className="attendance-item" key={record.id} data-testid={`attendance-${record.id}`}><span className="attendance-name">{record.subject}</span><span className={`attendance-state ${safe?'':'caution'}`}>{record.percentage}% · {safe?'Safe':'Watch'}</span><div className="attendance-bar" role="meter" aria-label={`${record.subject} attendance`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={record.percentage}><div className={`attendance-fill ${safe?'':'caution'}`} style={{width:`${record.percentage}%`}}/></div>{record.sessionsUntilAlert!==undefined&&<span className="attendance-note"><AlertCircle size={11}/> {record.sessionsUntilAlert===1?'One absence away':'Attendance margin is narrowing'}</span>}</div>;})}</div>:<div className="empty-day">Attendance records will appear here.</div>}</section>
+      <section className="card card-pad"><div className="card-heading"><div><h2 className="card-title">Your week, in numbers</h2><p className="card-subtitle">A snapshot of the plan you have made.</p></div><CalendarDays size={17} color="#4b8c7d"/></div><div className="mini-metrics"><Metric value={`${data.schedule.filter(b=>b.category==='Academic').length}`} label="class & study blocks"/><Metric value={`${data.tasks.filter(t=>!t.completed).length}`} label="open tasks"/><Metric value={`${data.schedule.filter(b=>b.category==='Social'||b.category==='Wellness').length}`} label="life & wellbeing blocks"/></div></section></div></div>
+  </main>;
+}
+
+export function SettingsPage(){
+  const {data,updatePreferences,toast,importTimetable}=useOps();const [uploading,setUploading]=useState(false),[error,setError]=useState('');const fileRef=useRef<HTMLInputElement>(null);
+  const importFile=async(name='Sample university timetable')=>{setUploading(true);setError('');try{const parsed=await simulateTimetableOCR(name,data.preferences.commuteBufferMinutes);const existing=new Set(data.schedule.map(b=>b.id));const count=parsed.filter(b=>!existing.has(b.id)).length;importTimetable(parsed);toast(count?'Timetable ready':'Already up to date',count?`${count} class and commute blocks added.`:'These timetable blocks are already in your plan.',count?'success':'info');}catch{setError('We could not read that file. Try a PDF, image, or the sample timetable.');}finally{setUploading(false);}};
+  const preference=(partial:Parameters<typeof updatePreferences>[0],title:string,detail:string)=>{updatePreferences(partial);toast(title,detail);};
+  return <main className="page"><PageIntro eyebrow="Make TimeOS yours" title="A planner that knows your rhythm." subtitle="Set the defaults that help your timetable and energy fit together."/>
+    <div className="settings-grid"><section className="card card-pad"><div className="card-heading"><div><h2 className="card-title">Your energy rhythm</h2><p className="card-subtitle">When do you usually feel most ready to focus?</p></div><Activity size={17} color="#4b8c7d"/></div><div className="choice-row">{(['Morning Person','Night Owl'] as const).map((choice,i)=><button className={`choice-card ${data.preferences.energyPreference===choice?'selected':''}`} key={choice} onClick={()=>preference({energyPreference:choice},'Energy preference saved',`Your planner will keep ${choice.toLowerCase()} in mind.`)} aria-pressed={data.preferences.energyPreference===choice} data-testid={`button-energy-${i===0?'morning':'night'}`}>{i===0?<Sun size={17}/>:<Moon size={17}/>}<strong>{choice}</strong><span>{i===0?'Start with the hard thing while your mind is fresh.':'Save your strongest focus for later in the day.'}</span></button>)}</div></section>
+      <section className="card card-pad"><div className="card-heading"><div><h2 className="card-title">Protect your recovery</h2><p className="card-subtitle">Your plan treats rest as a real commitment.</p></div><Moon size={17} color="#65915f"/></div><Field label={`Minimum sleep · ${data.preferences.minimumSleepHours} hours`}><div className="range-line"><input type="range" min="6" max="10" step=".5" value={data.preferences.minimumSleepHours} onChange={e=>updatePreferences({minimumSleepHours:Number(e.target.value)})} onMouseUp={()=>toast('Sleep preference saved','Your schedule summary has been updated.')} onTouchEnd={()=>toast('Sleep preference saved','Your schedule summary has been updated.')} aria-label="Minimum sleep hours" data-testid="input-minimum-sleep"/><span className="range-value">{data.preferences.minimumSleepHours}h</span></div></Field><div className="sleep-banner"><span><Moon size={14}/>Protected every night</span><span>11:00 PM – 7:00 AM</span></div></section>
+      <section className="card card-pad"><div className="card-heading"><div><h2 className="card-title">Commute buffer</h2><p className="card-subtitle">Reserve a little time before each class.</p></div><Clock3 size={17} color="#4b8c7d"/></div><Field label={`Minutes before class · ${data.preferences.commuteBufferMinutes} min`}><div className="range-line"><input type="range" min="0" max="60" step="5" value={data.preferences.commuteBufferMinutes} onChange={e=>updatePreferences({commuteBufferMinutes:Number(e.target.value)})} onMouseUp={()=>toast('Commute buffer saved','New timetable imports will use this buffer.')} onTouchEnd={()=>toast('Commute buffer saved','New timetable imports will use this buffer.')} aria-label="Commute buffer minutes" data-testid="input-commute-buffer"/><span className="range-value">{data.preferences.commuteBufferMinutes}m</span></div></Field><p className="modal-note">Applied to timetable blocks on import. Your existing plan stays as it is.</p></section>
+      <section className="card card-pad"><div className="card-heading"><div><h2 className="card-title">Bring in your timetable</h2><p className="card-subtitle">{data.timetableImported?'Timetable imported':'Simulated local OCR for a syllabus or timetable.'}</p></div><FileUp size={17} color="#4b8c7d"/></div><div className="upload-zone"><FileUp size={22} color="#397b70" style={{margin:'0 auto'}}/><strong>{uploading?'Reading timetable…':'Add a timetable or syllabus'}</strong><p>Select a file or try our sample. This demo simulates local OCR; nothing is uploaded.</p><button className="button-secondary" disabled={uploading} onClick={()=>fileRef.current?.click()} data-testid="button-choose-timetable">{uploading?<LoaderCircle className="spin" size={14}/>:<Plus size={14}/>} Choose image or PDF</button></div><input ref={fileRef} hidden type="file" accept="image/*,.pdf,application/pdf" aria-label="Choose timetable image or PDF" onChange={e=>{const f=e.currentTarget.files?.[0];if(f)void importFile(f.name);e.currentTarget.value='';}} data-testid="input-timetable-file"/><button className="button-secondary sample-option" disabled={uploading} onClick={()=>void importFile()} data-testid="button-sample-timetable">{uploading?<LoaderCircle className="spin" size={14}/>:<Sparkles size={14}/>} Use sample university timetable</button>{error&&<p role="alert" data-testid="status-import-error">{error}</p>}</section></div>
+  </main>;
+}
+export function NotFoundPage(){return <main className="page not-found"><div className="eyebrow">Wrong turn</div><h1>That page isn’t on your timetable.</h1><p className="page-subtitle">Your plan is still right where you left it.</p><Link className="button-primary" href="/" data-testid="link-not-found-home">Back to schedule</Link></main>;}
+
+function PageIntro({eyebrow,title,subtitle,action}:{eyebrow:string;title:string;subtitle:string;action?:ReactNode}){return <header className="welcome-row"><div><div className="eyebrow">{eyebrow}</div><h1 className="page-title">{title}</h1><p className="page-subtitle">{subtitle}</p></div>{action&&<div className="action-row">{action}</div>}</header>;}
+function StatCard({icon,tone,label,value,detail}:{icon:ReactNode;tone:string;label:string;value:string;detail:string}){return <div className="card stat-card"><span className={`stat-icon ${tone}`}>{icon}</span><div><div className="stat-label">{label}</div><div className="stat-value">{value}</div></div><span className="stat-detail">{detail}</span></div>;}
+function Metric({value,label}:{value:string;label:string}){return <div className="metric"><strong>{value}</strong><span>{label}</span></div>;}
+function ProposalView({proposal,onApply,onDiscard}:{proposal:ScheduleProposal;onApply:()=>void;onDiscard:()=>void}){return <><div className="reasoning"><span className="reasoning-dot"/>{proposal.reasoning}</div><div className="diff-label">Before and after</div><div className="diff-grid"><div className="diff-col"><h4>Original Plan</h4>{proposal.changes.map(c=><div className="diff-item" key={c.id}><strong>{c.title}</strong>{c.from}</div>)}</div><div className="diff-col new"><h4>AI Rebalanced Plan</h4>{proposal.changes.map(c=><div className="diff-item" key={c.id}><strong>{c.title}</strong><em>{c.to}</em><br/>{c.reason}</div>)}</div></div><p className="page-subtitle" style={{fontSize:10,margin:'10px 0 0'}}>{proposal.summary}</p><div className="protection-row">{proposal.protection.map((item,i)=><span className={`protection ${item.toLowerCase().includes('sleep')?'sleep-protect':''}`} key={`${i}-${item}`}>{item.toLowerCase().includes('sleep')?<Moon size={11}/>:<Heart size={11}/>} {item}</span>)}</div><div className="proposal-actions"><button className="button-secondary" onClick={onDiscard} data-testid="button-discard-proposal"><X size={14}/> Discard</button><button className="button-primary" onClick={onApply} data-testid="button-apply-proposal"><Check size={14}/> Apply changes</button></div></>;}
+function EnergyChart(){return <div aria-label="Energy peaks at 2 PM, study load is balanced across the day" role="img" data-testid="chart-energy-load"><svg className="energy-chart" viewBox="0 0 330 135" preserveAspectRatio="none"><defs><linearGradient id="energy-area" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#4b8c7d" stopOpacity=".19"/><stop offset="100%" stopColor="#4b8c7d" stopOpacity="0"/></linearGradient></defs>{[24,53,82,111].map(y=><line key={y} x1="28" x2="320" y1={y} y2={y} stroke="#e5eee5" strokeDasharray="3 4"/>)}<line x1="28" x2="28" y1="14" y2="112" stroke="#d7e5d9"/><path d="M28 83 C55 76 61 43 92 44 S130 58 151 37 S190 22 210 30 S244 59 265 66 S294 78 320 81 L320 112 L28 112Z" fill="url(#energy-area)"/><path d="M28 83 C55 76 61 43 92 44 S130 58 151 37 S190 22 210 30 S244 59 265 66 S294 78 320 81" fill="none" stroke="#4b8c7d" strokeWidth="2.5" strokeLinecap="round"/><path d="M28 92 C60 89 70 80 92 75 S130 73 151 61 S189 67 210 54 S244 58 265 52 S295 60 320 57" fill="none" stroke="#d3a747" strokeWidth="2" strokeDasharray="5 4" strokeLinecap="round"/>{[[28,'8a'],[92,'11a'],[151,'2p'],[210,'5p'],[265,'8p'],[320,'11p']].map(([x,label])=><text key={String(x)} x={x as number} y="130" textAnchor="middle" fill="#829899" fontSize="9">{label}</text>)}</svg><div className="chart-legend"><span><i className="legend-mark" style={{background:'#4b8c7d'}}/>Energy</span><span><i className="legend-mark" style={{background:'#d3a747'}}/>Study load</span></div></div>;}
+function WeeklyCalendar({dates,schedule,onSelect}:{dates:string[];schedule:ScheduleBlock[];onSelect:(date:string)=>void}){const hours=Array.from({length:16},(_,i)=>i+8);return <div className="week-grid" data-testid="calendar-week"><div className="week-day-head">TIME</div>{dates.map((d,i)=><button className="week-day-head" key={d} onClick={()=>onSelect(d)} data-testid={`button-week-day-${i}`}>{dayNames[i]}<br/>{Number(d.slice(-2))}</button>)}{hours.map(hour=><Fragment key={`hour-${hour}`}><div className="week-time">{String(hour).padStart(2,'0')}:00</div>{dates.map(date=><div className="week-cell" key={`${date}-${hour}`}>{schedule.filter(b=>b.date===date&&Number(b.start.slice(0,2))===hour).map(b=><button className={`week-event ${categoryClass(b.category)}`} key={b.id} title={`${b.title} · ${timeLabel(b.start)}–${timeLabel(b.end)}`} onClick={()=>onSelect(date)} data-testid={`week-event-${b.id}`}>{b.title}</button>)}</div>)}</Fragment>)}</div>;}
+function Dialog({title,subtitle,onClose,children}:{title:string;subtitle?:string;onClose:()=>void;children:ReactNode}){return <div className="modal-backdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)onClose();}}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><header className="modal-head"><div><h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div><button className="modal-close" aria-label="Close dialog" onClick={onClose} data-testid="button-close-dialog"><X size={16}/></button></header><div className="modal-body">{children}</div></section></div>;}
 function Field({label,children,full=false}:{label:string;children:ReactNode;full?:boolean}){return <div className={`form-field ${full?'full':''}`}><label>{label}{children}</label></div>;}
-function ModalFooter({onCancel,submitLabel,cancelLabel='Cancel'}:{onCancel:()=>void;submitLabel?:string;cancelLabel?:string}){
-  return <div className="modal-foot"><button type="button" className="button-secondary" onClick={onCancel} data-testid="button-cancel-modal">{cancelLabel}</button>{submitLabel&&<button type="submit" className="button-primary" data-testid="button-save-modal"><Check size={14}/>{submitLabel}</button>}</div>;
-}

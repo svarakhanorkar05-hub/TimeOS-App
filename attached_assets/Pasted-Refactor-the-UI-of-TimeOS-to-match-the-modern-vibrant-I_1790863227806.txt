@@ -1,0 +1,51 @@
+Refactor the UI of TimeOS to match the modern, vibrant Indigo/Violet light aesthetic from the previous design, while retaining the multi-page navigation architecture (Schedule, Rescheduler, Goals & Tasks, Balance & Analytics, Timetable & Setup).
+
+Keep all existing functionality, shared localStorage state, and route handlers intact. Focus on elevating the visual presentation, color harmony, typography, and card designs.
+
+---
+
+### 1. Aesthetic & Design System (Restore Previous Look)
+- Canvas Background: Crisp, modern porcelain/soft gray canvas (`#F8FAFC`).
+- Cards & Surfaces: Pure white cards (`#FFFFFF`) with thin borders (`border border-slate-200/80`), subtle elevated drop shadows (`shadow-sm hover:shadow-md transition-shadow`), and rounded corners (`rounded-2xl`).
+- Typography: Dark slate headings (`#0F172A`) and soft slate subtext (`#64748B`), clean pill badges, and high-readability fonts.
+- Primary Accent: Modern Indigo / Electric Violet (`#6366F1` / `#4F46E5`) for primary actions, navigation active states, and focus elements.
+- Semantic Category Palette:
+  - 🎓 Academic: Indigo / Slate Blue (`bg-indigo-50 text-indigo-700 border-indigo-200`)
+  - 📚 Deep Work / Skills: Amber / Warm Ochre (`bg-amber-50 text-amber-700 border-amber-200`)
+  - 🏋️ Wellness / Gym: Emerald / Mint (`bg-emerald-50 text-emerald-700 border-emerald-200`)
+  - 👥 Social / Festivals: Rose / Coral (`bg-rose-50 text-rose-700 border-rose-200`)
+  - 😴 Protected Sleep: Slate / Violet (`bg-slate-100 text-slate-700 border-slate-300`)
+
+---
+
+### 2. Header & Navigation Bar Styling
+- Replace the current plain top bar with a polished navbar:
+  - Left: "TimeOS" logo in bold slate with a sleek gradient badge (`bg-indigo-100 text-indigo-700 font-medium text-xs px-2.5 py-0.5 rounded-full`) labeled "Student Edition".
+  - Center: Rounded pill navigation tab bar (`bg-slate-100 p-1 rounded-xl flex gap-1`). Active tab should feature a solid white background with a crisp border, indigo text, and a subtle shadow (`bg-white text-indigo-600 shadow-sm font-semibold`). Inactive tabs should be clean slate (`text-slate-600 hover:text-slate-900`).
+  - Right: Quick status pills:
+    - `⚡ High Focus` (indigo pill)
+    - `🎯 88% Balance` (amber pill)
+    - `😴 7.5h Sleep Protected` (emerald pill)
+    - Primary CTA button: `+ Add Block` in solid indigo (`bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm rounded-xl px-4 py-2`).
+
+---
+
+### 3. Screen Refinements Across Tabs
+
+1. **Schedule & Timeline Tab**:
+   - Hourly calendar blocks should look like floating modern event chips with category-colored left accent borders, clear time ranges, bold titles, and the `Why was this scheduled?` tooltip trigger.
+   - Clean day-switcher buttons ("Today", "Tomorrow", "Weekend", "Week") using active pill states.
+
+2. **Adaptive Rescheduler Tab**:
+   - Hero banner with a subtle gradient background (`bg-gradient-to-r from-indigo-50 via-white to-purple-50 border border-indigo-100 rounded-2xl p-6`).
+   - Clean chips for quick scenarios (e.g., "College festival popped up tomorrow", "Feeling low energy").
+   - Crisp side-by-side Diff Viewer comparing "Before" (slate borders) vs "Proposed AI Schedule" (green/indigo highlighted changed slots).
+
+3. **Balance & Analytics Tab**:
+   - Modern cards with circular progress rings or stylized percentage bars for academic, personal, and social breakdown.
+   - Attendance cards with clean status badges (`Safe` in emerald, `At Risk` in rose).
+
+4. **Goals & Tasks & Setup Tabs**:
+   - Clean Kanban lanes and settings cards with toggle switches, sliders, and dropzones that follow the same rounded-2xl and slate-200 border aesthetic.
+
+Make sure the app remains responsive, zero-error, and fast to load.

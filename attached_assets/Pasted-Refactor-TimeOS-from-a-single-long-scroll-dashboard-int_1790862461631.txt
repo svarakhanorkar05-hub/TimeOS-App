@@ -1,0 +1,59 @@
+Refactor TimeOS from a single long-scroll dashboard into a multi-page web application with a modern top navigation bar (or responsive sidebar) where each major feature has its own dedicated page/view.
+
+Maintain the clean, vibrant light theme, responsive design, and localStorage persistence across all views.
+
+---
+
+### 1. Navigation Architecture (Top Bar / Nav Menu)
+Add a persistent header with the TimeOS logo ("Student Edition" badge), active page indicators, quick stats pill ("⚡ High Focus | 😴 7.5h Sleep"), and links to switch between views:
+
+1. 📅 **Schedule & Timeline** (Default Home)
+2. 🔄 **Adaptive Rescheduler** ("Life Happens" Engine)
+3. 🎯 **Goals & Tasks** (Task backlog, roadmaps, and deadlines)
+4. 📊 **Balance & Analytics** (Life balance radar, attendance guard, energy curves)
+5. ⚙️ **Timetable & Setup** (OCR schedule upload, profile & energy settings)
+
+---
+
+### 2. Dedicated View Specifications
+
+#### View 1: 📅 Schedule & Timeline (`/` or `tab="schedule"`)
+- Clean, focused daily/weekly calendar grid (hourly breakdown from 8:00 AM to 11:00 PM).
+- Clear time block cards with color categories: Academic (Indigo), Deep Work (Amber), Wellness (Emerald), Social (Rose), Protected Sleep (Slate/Violet).
+- Interactive details: Click any card to see details, mark as done, or click "Why was this scheduled?" for AI explanation.
+- Floating or header quick action: "+ Add Commitment".
+
+#### View 2: 🔄 Adaptive Rescheduler (`/reschedule` or `tab="reschedule"`)
+- Dedicated hero interface for the hackathon USP: "Life Happens: Adaptive Engine".
+- Natural language input bar ("Tell TimeOS what changed today...").
+- Quick test scenario chips:
+  - 🎪 "College festival popped up tomorrow 5 PM – 10 PM"
+  - 🤒 "Feeling sick/low energy, push hard study sessions"
+  - 📝 "DBMS assignment deadline moved up 1 day"
+- Visual side-by-side **Before vs After Diff Viewer**:
+  - Left: "Original Plan"
+  - Right: "AI Rebalanced Plan" (highlighting moved vs protected blocks)
+- Clear explanations: "Why these changes were made".
+- "Apply Changes" button that updates the main schedule and syncs to localStorage.
+
+#### View 3: 🎯 Goals & Tasks (`/tasks` or `tab="tasks"`)
+- Kanban board or categorized list: Backlog, Today's Priorities, In Progress, Completed.
+- Task items showing estimated hours, priority tag, and deadline countdown.
+- Interactive "+ New Goal / Task" modal/form with fields for title, deadline, energy requirement, and category.
+
+#### View 4: 📊 Balance & Analytics (`/analytics` or `tab="analytics"`)
+- Life Balance Distribution: Academic (35%), Skill Building (25%), Social (20%), Sleep (20%).
+- Attendance Health Pulse:
+  - Subject-by-subject attendance cards with safe/warning indicators (e.g., "DBMS: 82% Safe", "OS: 74% Watch — 1 absence away from low threshold").
+- Energy vs Cognitive Load graph: Visual curve mapping peak student focus hours vs schedule intensity.
+
+#### View 5: ⚙️ Timetable & Setup (`/settings` or `tab="settings"`)
+- "Upload College Timetable / Syllabus" simulated OCR dropzone (uploading instantly populates the weekly lecture slots).
+- Student Preferences: Morning Person vs Night Owl toggle, minimum protected sleep slider (default 7.5 hrs), and commute time buffers.
+
+---
+
+### 3. Polish & Requirements
+- Use clean client-side routing (React Router tabs or state-based navigation) that feels instant and fluid.
+- Include smooth page transition animations.
+- Ensure the current state (events, rescheduled updates, attendance) is shared seamlessly across all tabs via shared state or localStorage.
