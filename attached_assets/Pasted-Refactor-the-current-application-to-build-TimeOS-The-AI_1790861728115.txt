@@ -1,0 +1,57 @@
+Refactor the current application to build "TimeOS — The AI Operating System for Time for Students". 
+
+Replace the current enterprise OpsMind UI with a clean, vibrant, modern, high-contrast LIGHT THEME designed specifically for university students. Keep all logic front-end persistent (using localStorage) so the demo is completely interactive, reliable, and functional without external API keys.
+
+---
+
+### 1. Visual & Aesthetic Requirements (Modern Light Theme)
+- Palette: Clean porcelain/soft off-white canvas (`#F8FAFC`), crisp white cards (`#FFFFFF`) with subtle border lines (`#E2E8F0`), soft drop shadows, and high-readability dark slate typography (`#0F172A`).
+- Accent Colors: Indigo/Electric Violet (`#6366F1`) for primary actions, Emerald (`#10B981`) for wellness/sleep/health, Amber (`#F59E0B`) for deadlines/study, and Rose (`#F43F5E`) for protected social/festival blocks.
+- Typography & Polish: Rounded corners (`rounded-2xl`), clean pill badges, smooth transition animations, and modern iconography (Lucide-react).
+
+---
+
+### 2. Core Dashboard Layout & Navigation
+Top Navigation / Header:
+- Logo: "TimeOS" with a clean gradient badge ("Student Edition").
+- Quick Stats Bar: "Energy State: High Focus ⚡", "Weekly Balance: 88% 🎯", "Protected Sleep: 7.5 hrs/night 😴".
+- Quick-action buttons: "+ Add Commitment" and "⚡ What-If Simulator".
+
+Main Workspace (3-Column or Responsive Grid Layout):
+
+#### Column 1: Daily Timeline & Smart Calendar
+- An interactive hourly calendar view (8:00 AM – 11:00 PM) showing categorized time blocks:
+  - 🎓 Academic: "Database Systems Lecture" (09:00 - 11:00 AM)
+  - 📚 Deep Work: "React Hackathon Project" (02:00 - 04:00 PM)
+  - 🏋️ Wellness: "Gym / Strength Workout" (05:30 - 06:30 PM)
+  - 😴 Non-negotiable sleep block (11:00 PM – 07:00 AM)
+- Each card shows time, category pill, and an info icon: "Why was this scheduled here?" (Clicking opens an AI tool-tip: e.g., "Scheduled during your peak cognitive window between 2 PM and 4 PM").
+- Support drag-to-reorder or click-to-complete tasks.
+
+#### Column 2: "My Day Changed" & AI Rescheduling Engine (Hero Hackathon Demo Feature)
+- Dedicated card: "Life Happens: Adaptive Rescheduling".
+- Natural Language Input Box with pre-set quick-scenario test chips:
+  - 🎪 "College festival popped up tomorrow 5 PM – 10 PM"
+  - 🤒 "Feeling low energy today, defer heavy study"
+  - 📝 "DBMS assignment deadline moved up by 1 day"
+- When a prompt is submitted (or a chip is clicked):
+  1. Show an immediate simulated AI reasoning state ("Analyzing impact on 4 commitments...").
+  2. Display a side-by-side Diff View:
+     - Old Schedule ➡️ Proposed New Schedule
+     - e.g., "DBMS Study shifted to Wednesday 10 AM", "React Project relocated to Saturday morning", "Festival locked as Protected Social Time", "7.5h Sleep protected".
+  3. Action Buttons: "Apply Changes" (instantly updates the live timeline and persists to localStorage) and "Discard".
+
+#### Column 3: Life Balance, Energy & Attendance Tracker
+- Balance Radar / Progress Rings: Academic (35%), Skill Building (25%), Social/Events (20%), Sleep/Rest (20%).
+- Real-time Course Attendance Gauge: e.g., "DBMS: 82% (Safe)", "Operating Systems: 74% (1 absence away from low attendance alert!)".
+- Energy vs Load Graph: Visual curves showing user energy peaks vs scheduled mental workload.
+
+---
+
+### 3. Additional Interactive Modals
+1. "Upload Timetable / Syllabus (AI OCR Simulated)":
+   - A drop zone where clicking uploads/selects a sample college timetable image or PDF, immediately parsing 4 lecture blocks directly into the schedule.
+2. "+ Add New Goal / Task":
+   - Inputs: Title, Category, Estimated Hours, Deadline, and Preferred Time (Morning / Night Owl / Flexible).
+
+Ensure the prototype runs with zero console errors, features rich sample student data, and immediately demonstrates the adaptive rescheduling flow upon loading.

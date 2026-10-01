@@ -1,54 +1,32 @@
-import type { DocumentRecord, Insight, Risk, Task } from '../data/model';
+import type { BlockCategory, ScheduleBlock, ScheduleProposal } from '../data/model';
+import { formatDay, localDate, makeFestivalProposal, saturdayDate, tomorrowDate } from '../data/seed';
 
-const wait = (ms=650) => new Promise(resolve => window.setTimeout(resolve, ms));
-export async function analyzeDocument(document:DocumentRecord) {
-  await wait();
-  return {summary:document.summary, actions:document.actions, risks:document.risks, citations:document.sources};
+const pause=(ms=850)=>new Promise<void>(resolve=>window.setTimeout(resolve,ms));
+const block=(id:string,title:string,category:BlockCategory,date:string,start:string,end:string,why:string,protectedTime=false):ScheduleBlock=>({id,title,category,date,start,end,why,completed:false,protected:protectedTime});
+export async function analyzeScheduleScenario(text:string,schedule:ScheduleBlock[]):Promise<ScheduleProposal>{
+  await pause(920);
+  const query=text.toLowerCase();
+  if(query.includes('festival')||query.includes('5 pm')||query.includes('5–10')||query.includes('5-10'))return makeFestivalProposal(schedule);
+  if(query.includes('energy')||query.includes('low')||query.includes('tired')){
+    const updated=schedule.map(item=>item.id==='dbms-study'?{...item,date:saturdayDate,start:'09:00',end:'10:30',why:'Deferred because today is a low-energy day; return to it after rest.'}:item);
+    return {id:`proposal-energy-${Date.now()}`,scenario:text,summary:'Today gets lighter. The heavy DBMS study moves to a rested morning; essentials, movement and sleep stay protected.',reasoning:'I found 4 mentally demanding commitments. I moved the heaviest flexible study block and kept your fixed classes, meals and recovery time intact.',changes:[{id:'dbms-study',title:'DBMS assignment study',from:'Today · 20:00–21:15',to:`${formatDay(saturdayDate)} · 09:00–10:30`,reason:'Heavy study deferred to a higher-energy window.'}],protection:['Meals & reset time','7.5 hours sleep · protected'],schedule:updated};
+  }
+  if(query.includes('deadline')||query.includes('dbms')||query.includes('assignment')||query.includes('one day')){
+    const updated=schedule.map(item=>item.id==='dbms-study'?{...item,date:tomorrowDate,start:'08:30',end:'10:30',why:'Moved earlier to protect the newly advanced DBMS deadline.'}:item);
+    return {id:`proposal-deadline-${Date.now()}`,scenario:text,summary:'The DBMS assignment moves into tomorrow morning. Lighter review stays optional and sleep remains protected.',reasoning:'The deadline moved forward by a day, so I prioritized the DBMS assignment in your clearest morning window without displacing fixed classes.',changes:[{id:'dbms-study',title:'DBMS assignment study',from:'Today · 20:00–21:15',to:'Tomorrow · 08:30–10:30',reason:'Earlier deadline needs a focused, earlier start.'}],protection:['Fixed lectures remain unchanged','7.5 hours sleep · protected'],schedule:updated};
+  }
+  const updated=schedule.map(item=>item.id==='dbms-study'?{...item,date:saturdayDate,start:'09:00',end:'10:30',why:'Rescheduled to leave room for your new commitment.'}:item);
+  const event=block(`whatif-${Date.now()}`,'New commitment','Social',tomorrowDate,'17:00','18:00','Added from your what-if scenario.',true);
+  updated.push(event);
+  return {id:`proposal-custom-${Date.now()}`,scenario:text,summary:'I made room for your new commitment by shifting flexible study, while preserving classes and rest.',reasoning:'I compared the new request with your existing commitments and found one flexible block to move.',changes:[{id:'dbms-study',title:'DBMS assignment study',from:'Today · 20:00–21:15',to:`${formatDay(saturdayDate)} · 09:00–10:30`,reason:'Moved to make the new plan fit.'},{id:event.id,title:'New commitment',from:'Not scheduled',to:`${formatDay(tomorrowDate)} · 17:00–18:00`,reason:'Added as protected personal time.',protected:true}],protection:['New commitment protected','7.5 hours sleep · protected'],schedule:updated};
 }
-export async function extractTasks(document:DocumentRecord):Promise<Task[]> {
-  await wait(450);
-  const atlas = document.title.toLowerCase().includes('atlas');
-  return [{
-    id:`task-ai-${Date.now()}`, title:atlas?'Complete Vendor Alpha API approval':document.actions[0] || `Review ${document.title}`,
-    project:document.relatedProjects[0] || 'Project Atlas', owner:atlas?'Priya Shah':'Alex Morgan',
-    priority:'High', deadline:atlas?'2026-06-16':'2026-06-19', status:'To do', riskScore:82,
-    dependency:atlas?'Vendor security addendum':'Source document review',
-  }];
-}
-export async function detectRisks(document:DocumentRecord):Promise<Partial<Risk>[]> {
-  await wait(350);
-  if (document.title.includes('Atlas')) return [{title:'Vendor approval delay',severity:'High',probability:82,impact:'High',affectedTasks:3,project:'Project Atlas',recommendation:'Escalate approval to Finance leadership within 24 hours.'}];
-  return document.risks.map(title=>({title,severity:'Medium',probability:58,impact:'Medium',affectedTasks:1,project:document.relatedProjects[0]||'Project Nova',recommendation:'Confirm an accountable owner and review the deadline at the next team check-in.'}));
-}
-export async function answerEnterpriseQuestion(question:string, docs:DocumentRecord[]) {
-  await wait(900);
-  const q=question.toLowerCase();
-  if (q.includes('vendor') || q.includes('alpha') || q.includes('why')) return {
-    answer:'Vendor Alpha was selected because it offered lower integration cost and stronger API reliability, alongside a more responsive support commitment for the Atlas rollout. The decision is documented, but final approval of the security addendum is still outstanding. That approval currently gates three downstream engineering tasks.',
-    sources:['Vendor Evaluation','Engineering Meeting Notes','Finance Comparison'],
-  };
-  if (q.includes('overdue')) return {
-    answer:'There are 3 overdue actions across the portfolio. Marketing creative review and the regional landing-page copy are blocking the Nova launch QA window; the client contract redlines also need a named reviewer. I recommend confirming owners today.',
-    sources:['Marketing Campaign Plan','Client Contract Review','Launch Calendar'],
-  };
-  if (q.includes('deadline') || q.includes('approach')) return {
-    answer:'Five deadlines fall within the next 72 hours. The closest critical checkpoint is the Q3 platform budget sign-off on June 15, followed by Vendor Alpha API approval on June 16 and the Atlas security review on June 17.',
-    sources:['Q3 Financial Planning','Project Atlas Status Report','Engineering Meeting Notes'],
-  };
-  if (q.includes('block') || q.includes('risk')) return {
-    answer:'Project Atlas is the only project currently on the critical path. Vendor Alpha API approval is pending and blocks integration credentials, security review and the readiness review. Nova remains on track, although campaign assets need a prompt approval.',
-    sources:['Project Atlas Status Report','Vendor Evaluation','Engineering Meeting Notes'],
-  };
-  return {answer:`I found ${docs.length} relevant enterprise records. The clearest signal is that teams have documented owners and delivery milestones, but vendor approval and cross-functional review remain the main dependencies. You can open the cited records to trace each recommendation back to its source.`,sources:['Project Atlas Status Report','Q3 Financial Planning','Marketing Campaign Plan']};
-}
-export async function generateInsights():Promise<Insight[]> {
-  await wait(700);
+export async function simulateTimetableOCR(fileName='Sample university timetable'):Promise<ScheduleBlock[]>{
+  await pause(1050);
+  const d=tomorrowDate;
   return [
-    {id:`ins-${Date.now()}`,title:'A single approval can recover Atlas schedule',description:'Vendor Alpha approval is upstream of three engineering actions. A 24-hour Finance escalation is likely to protect the June integration readiness checkpoint.',category:'Recommendation'},
-    {id:`ins-${Date.now()}-b`,title:'Review load is uneven across departments',description:'Engineering owns 42% of the open high-priority work. Moving one readiness review to Operations would reduce single-team exposure.',category:'Workload'},
+    block('ocr-lecture-dbms','Database Systems · Lecture','Academic',d,'09:00','10:30','Parsed from your timetable; fixed lecture block.'),
+    block('ocr-lecture-os','Operating Systems · Lecture','Academic',d,'11:00','12:30','Parsed from your timetable; fixed lecture block.'),
+    block('ocr-lecture-hci','Human–Computer Interaction · Studio','Academic',d,'13:30','15:00','Parsed from your timetable; studio session.'),
+    block('ocr-lecture-math','Discrete Mathematics · Tutorial','Academic',d,'15:30','16:30','Parsed from your timetable; tutorial block.'),
   ];
-}
-export async function explainDecision() {
-  await wait(550);
-  return 'Vendor Alpha was selected after Engineering and Finance compared reliability, support responsiveness and total integration cost. It was the strongest fit for the Atlas rollout, with a lower integration cost and more reliable API than the alternatives. The remaining open item is the security addendum, not the vendor decision itself.';
 }
