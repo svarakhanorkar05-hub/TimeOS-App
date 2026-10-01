@@ -334,3 +334,57 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .deadline-late{color:#be123c}
 .deadline-today{color:#b45309}
 footer{color:#64748b!important}
+
+.login-page{min-height:calc(100dvh - 76px);display:grid;place-items:center;padding:42px 20px;background:radial-gradient(ellipse at 50% 42%,rgba(224,231,255,.58),transparent 58%)}
+.login-panel{width:min(100%,440px);padding:36px;background:rgba(255,255,255,.92);border:1px solid rgba(226,232,240,.9);border-radius:24px;box-shadow:0 18px 55px -22px rgba(49,46,129,.2);text-align:center}
+.login-mark{width:48px;height:48px;display:grid;place-items:center;margin:0 auto 22px;border-radius:16px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 8px 20px #6366f13b}
+.login-panel .eyebrow{margin-bottom:9px}
+.login-panel .page-title{font-size:30px;margin:0 0 8px}
+.login-form{display:grid;gap:16px;margin-top:28px;text-align:left}
+.login-field{display:grid;gap:7px}
+.login-field label{font-size:12px;font-weight:700;color:#334155}
+.login-field input{width:100%;height:46px;padding:0 13px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;color:#0f172a;font-size:13px;transition:border-color .18s,box-shadow .18s}
+.login-field input::placeholder{color:#94a3b8}
+.login-field input:focus-visible{outline:0;border-color:#818cf8;box-shadow:0 0 0 4px #6366f125}
+.login-submit{width:100%;min-height:46px;margin-top:2px}
+.login-feedback{margin:0;padding:11px 12px;border:1px solid #ddd6fe;border-radius:11px;background:#f5f3ff;color:#5b43cf;font-size:11px;line-height:1.5}
+.login-back{display:inline-block;margin-top:24px;color:#6366f1;font-size:12px;font-weight:700;text-decoration:none}
+.login-back:hover{color:#7c3aed;text-decoration:underline}
+@media(max-width:680px){.login-page{min-height:calc(100dvh - 62px);padding:28px 16px}.login-panel{padding:28px 22px}}
+
+.app-shell:not(.login-shell){display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100dvh}
+.app-sidebar{position:sticky;top:0;height:100dvh;display:flex;flex-direction:column;gap:28px;padding:24px 16px 16px;background:rgba(255,255,255,.86);border-right:1px solid rgba(226,232,240,.85);backdrop-filter:blur(16px);z-index:12}
+.app-sidebar .brand{align-self:flex-start;margin:0 4px}
+.sidebar-nav{display:grid;gap:24px}
+.sidebar-section{display:grid;gap:5px}
+.sidebar-section-label{margin:0 12px 4px;color:#94a3b8;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.sidebar-link{display:flex;align-items:center;gap:11px;min-height:43px;padding:0 12px;border-radius:13px;color:#64748b;font-size:13px;font-weight:650;text-decoration:none;transition:background .18s,color .18s,transform .18s,box-shadow .18s}
+.sidebar-link:hover{background:#eef2ff;color:#4f46e5;transform:translateX(2px)}
+.sidebar-link.active{background:linear-gradient(110deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 4px 12px #6366f133}
+.sidebar-foot{display:grid;gap:14px;margin-top:auto}
+.sidebar-status{display:grid;gap:7px}
+.sidebar-status .status-chip{justify-content:flex-start;min-height:34px;padding:7px 9px;font-size:10px}
+.sidebar-note{display:grid;gap:4px;padding:13px 12px;border:1px solid #e9e5ff;border-radius:14px;background:#f5f3ff;color:#5b43cf;font-size:11px;line-height:1.4}
+.sidebar-note span{color:#64748b}
+.app-main{display:flex;flex-direction:column;min-width:0;min-height:100dvh}
+.app-main>.page{width:100%;flex:1}
+.app-main>.topbar{position:sticky;z-index:10;top:0}
+.header-context{font-size:14px;font-weight:750;color:#0f172a;letter-spacing:-.02em}
+.login-shell{display:block;min-height:100dvh}
+.login-shell .app-main{min-height:100dvh}
+@media(max-width:760px){
+	.app-shell:not(.login-shell){grid-template-columns:minmax(0,1fr)}
+	.app-sidebar{position:static;height:auto;gap:12px;padding:11px 14px 0;border-right:0;border-bottom:1px solid rgba(226,232,240,.85)}
+	.app-sidebar .brand{margin:0 4px 2px}
+	.sidebar-nav{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:9px}
+	.sidebar-nav::-webkit-scrollbar{display:none}
+	.sidebar-section{display:contents}
+	.sidebar-section-label{display:none}
+	.sidebar-link{flex:none;min-height:38px;padding:0 10px;white-space:nowrap;font-size:11px}
+	.sidebar-link:hover{transform:none}
+	.sidebar-foot{display:none}
+	.app-main{min-height:0}
+	.app-main>.topbar{height:62px;padding:0 16px;gap:9px}
+	.header-context{display:none}
+	.app-main>.topbar .header-date{display:none}
+}

@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { Form } from '@/components/ui/form';
-import { Activity, AlertCircle, ArrowLeftRight, CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, FileUp, Heart, Info, LoaderCircle, Moon, Plus, Sparkles, Sun, Target, WandSparkles, X } from 'lucide-react';
+import { Activity, AlertCircle, ArrowLeftRight, ArrowRight, CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, FileUp, Heart, Info, LoaderCircle, Moon, Plus, Sparkles, Sun, Target, WandSparkles, X } from 'lucide-react';
 import { Link } from 'wouter';
 import { useOps } from '../context/OpsContext';
 import type { BlockCategory, PreferredTime, ScheduleBlock, ScheduleProposal, StudentTask, TaskStatus } from '../data/model';
@@ -105,6 +105,24 @@ export function SettingsPage(){
       <section className="card card-pad"><div className="card-heading"><div><h2 className="card-title">Protect your recovery</h2><p className="card-subtitle">Your plan treats rest as a real commitment.</p></div><Moon size={17} color="#65915f"/></div><Field label={`Minimum sleep · ${data.preferences.minimumSleepHours} hours`}><div className="range-line"><input type="range" min="6" max="10" step=".5" value={data.preferences.minimumSleepHours} onChange={e=>updatePreferences({minimumSleepHours:Number(e.target.value)})} onMouseUp={()=>toast('Sleep preference saved','Your schedule summary has been updated.')} onTouchEnd={()=>toast('Sleep preference saved','Your schedule summary has been updated.')} aria-label="Minimum sleep hours" data-testid="input-minimum-sleep"/><span className="range-value">{data.preferences.minimumSleepHours}h</span></div></Field><div className="sleep-banner"><span><Moon size={14}/>Protected every night</span><span>11:00 PM – 7:00 AM</span></div></section>
       <section className="card card-pad"><div className="card-heading"><div><h2 className="card-title">Commute buffer</h2><p className="card-subtitle">Reserve a little time before each class.</p></div><Clock3 size={17} color="#4b8c7d"/></div><Field label={`Minutes before class · ${data.preferences.commuteBufferMinutes} min`}><div className="range-line"><input type="range" min="0" max="60" step="5" value={data.preferences.commuteBufferMinutes} onChange={e=>updatePreferences({commuteBufferMinutes:Number(e.target.value)})} onMouseUp={()=>toast('Commute buffer saved','New timetable imports will use this buffer.')} onTouchEnd={()=>toast('Commute buffer saved','New timetable imports will use this buffer.')} aria-label="Commute buffer minutes" data-testid="input-commute-buffer"/><span className="range-value">{data.preferences.commuteBufferMinutes}m</span></div></Field><p className="modal-note">Applied to timetable blocks on import. Your existing plan stays as it is.</p></section>
       <section className="card card-pad"><div className="card-heading"><div><h2 className="card-title">Bring in your timetable</h2><p className="card-subtitle">{data.timetableImported?'Timetable imported':'Simulated local OCR for a syllabus or timetable.'}</p></div><FileUp size={17} color="#4b8c7d"/></div><div className="upload-zone"><FileUp size={22} color="#397b70" style={{margin:'0 auto'}}/><strong>{uploading?'Reading timetable…':'Add a timetable or syllabus'}</strong><p>Select a file or try our sample. This demo simulates local OCR; nothing is uploaded.</p><button className="button-secondary" disabled={uploading} onClick={()=>fileRef.current?.click()} data-testid="button-choose-timetable">{uploading?<LoaderCircle className="spin" size={14}/>:<Plus size={14}/>} Choose image or PDF</button></div><input ref={fileRef} hidden type="file" accept="image/*,.pdf,application/pdf" aria-label="Choose timetable image or PDF" onChange={e=>{const f=e.currentTarget.files?.[0];if(f)void importFile(f.name);e.currentTarget.value='';}} data-testid="input-timetable-file"/><button className="button-secondary sample-option" disabled={uploading} onClick={()=>void importFile()} data-testid="button-sample-timetable">{uploading?<LoaderCircle className="spin" size={14}/>:<Sparkles size={14}/>} Use sample university timetable</button>{error&&<p role="alert" data-testid="status-import-error">{error}</p>}</section></div>
+  </main>;
+}
+export function LoginPage(){
+  const [message,setMessage]=useState('');
+  return <main className="login-page">
+    <section className="login-panel" aria-labelledby="login-title">
+      <div className="login-mark"><CalendarDays size={20}/></div>
+      <div className="eyebrow">Your time, in balance</div>
+      <h1 id="login-title" className="page-title">Welcome back.</h1>
+      <p className="page-subtitle">Sign in to continue to your TimeOS planner.</p>
+      <form className="login-form" onSubmit={event=>{event.preventDefault();setMessage('Sign-in is not connected in this demo. Your credentials were not sent or saved.');}}>
+        <div className="login-field"><label htmlFor="login-email">Email address</label><input id="login-email" type="email" autoComplete="email" placeholder="you@university.edu" required/></div>
+        <div className="login-field"><label htmlFor="login-password">Password</label><input id="login-password" type="password" autoComplete="current-password" placeholder="Enter your password" required/></div>
+        <button className="button-primary login-submit" type="submit" data-testid="button-login">Sign in <ArrowRight size={15}/></button>
+        {message&&<p className="login-feedback" role="status">{message}</p>}
+      </form>
+      <Link className="login-back" href="/">Return to your planner</Link>
+    </section>
   </main>;
 }
 export function NotFoundPage(){return <main className="page not-found"><div className="eyebrow">Wrong turn</div><h1>That page isn’t on your timetable.</h1><p className="page-subtitle">Your plan is still right where you left it.</p><Link className="button-primary" href="/" data-testid="link-not-found-home">Back to schedule</Link></main>;}
